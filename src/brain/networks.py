@@ -5,6 +5,7 @@ from ..utils import collections as collections
 from utils.properties import Registry
 from brain.elements import Synapse
 from brain.elements import Neuron
+import brain.runner as runner
 
 # 网络类型
 class NetworkType(Enum):
@@ -462,6 +463,35 @@ class NeuralNetwork:
         return self.put(n,inids,outinds,synapseModelConfig)
 
 
+
+    #endregion
+
+    #region 执行相关
+    def reset(self):
+        '''
+        重置执行状态
+        :return: None
+        '''
+        ns = self.getNeurons()
+        collections.foreach(ns,lambda n:n.reset())
+        synapses = self.getSynapses()
+        collections.foreach(synapses,lambda s:s.reset())
+
+    def getRunner(self):
+        name = self.definition.runner.name
+        return runner.runners.find(name)
+
+    def doLearn(self):
+        runner = self.getRunner()
+        task = self.definition.runner.task
+        runner.doLearn(self,task)
+        return task
+
+    def doTest(self):
+        runner = self.getRunner()
+        task = self.definition.runner.task
+        runner.doTest(self, task)
+        return task
 
     #endregion
 

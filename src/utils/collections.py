@@ -1,5 +1,6 @@
 import collections
 import json
+from functools import reduce
 from .strs import *
 
 __all__ = ['first','findall','listtostr','dicttostr']
@@ -157,5 +158,15 @@ def dicttostr(dict,**props):
     for key, value in dict.items():
         strs.append(format.replace('{$P}',str(key)).replace('{$V}',str(value)))
     return listtostr(strs,format='csv',sep=sep)
+
+#endregion
+
+#region 值类型list的计算
+
+# 计算list的平均值，最大和最小
+def rangefeature(list):
+    if isEmpty(list):return 0.0
+    sum = reduce(lambda x,y:x+y,list)
+    return max(list),sum / len(list),min(list)
 
 #endregion
