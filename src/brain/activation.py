@@ -6,6 +6,7 @@ import random
 from ..utils.properties import NameInfo
 from ..utils.collections import *
 
+__all__ = ['ActivationFunction','Gaussian','Sigmod','activations']
 #region 激活函数管理
 
 # 抽象激活函数
@@ -23,7 +24,7 @@ class ActivationFunction:
         激活函数执行
         :param name:     str or NameInfo
         :param inputs:   输入
-        :param context:  执行上下文
+        :param modelparams:  dict 执行上下文
         :return:
         '''
         activationObj = activations.get(name)
@@ -98,7 +99,7 @@ class Gaussian(ActivationFunction):
         center = params.get('center',self.center)
         sigma = params.get('sigma',self.sigma)
         value = math.exp(-math.pow(inputs-center,2)/math.pow(sigma,2))
-        return random() < value
+        return value,random() < value
 
 
 

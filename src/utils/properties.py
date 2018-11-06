@@ -1,4 +1,4 @@
-
+import numpy as np
 from functools import reduce
 import re
 from .collections import *
@@ -67,13 +67,6 @@ class NameInfo:
         '''
         return self.name + '' if not isVaild(self.description) else '(' + self.description + ')'
 
-    storeformat1 = '{"name":"{$name}"' + '{?({$name}!={$caption})({#sep}"caption":"{$caption?hide}")}'\
-                                       + '{?({$name}!={$description})({#sep}"description":"{$description?hide}")}'\
-                                       + '({#sep}"cataory":"{$cataory?hide}")'\
-                                       + '("alias":[ + {$alias?hide}})'
-
-    def store(self,formats=FORMAT):
-        return "{name = '" + self.name + ''
 
 
 
@@ -102,6 +95,13 @@ class Range:
         self.begin = m.group(1)
         self.end = m.group(2)
         self.step = m.group(3)  #？有错误
+
+    def sample(self,size=1):
+        if self.distributionName == 'uniform':
+            return np.random.uniform(self.begin,self.end,size)
+        elif self.distributionName == 'normal':
+            return np.random.normal(self.begin,self.end,size)
+        return None
 
 
 
@@ -188,3 +188,6 @@ class Registry:
         if not setifnotexist:return default
         self.__tables__[name] = default
         return default
+
+    def keys(self):
+        return self.__tables__.keys()

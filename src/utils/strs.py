@@ -1,5 +1,6 @@
 
 from .properties import *
+from .properties import Registry
 
 __all__ = ['FORMAT','isVaild','vaild','equals','getName','format']
 
@@ -112,5 +113,30 @@ def format(obj,**fmts):
             fmt = '.2f' if fmts is None else fmts.get('float','.2f')
             return '{0:'+fmt+'}'.format(obj)
     else:raise RuntimeError('功能没有实现')
+
+#endregion
+
+#region command
+
+class Command:
+    def __init__(self,id,parser):
+        '''
+        命令，这里约定命令的格式总是：动作 对象 动作参数，例如：show task log
+        :param id:              str     id
+        :param parser:          any     解析器，包含cmdMatch(text,**context)函数,cmdCompletions函数,cmdExecute(action,obj,*param,text,**context)函数，cmdHelp函数
+        '''
+        self.id = id
+        self.parser = parser
+        self.help = help
+    def match(self,text):
+        '''
+        命令匹配
+        :param text: str 匹配文本
+        :return:     (bool,action,obj,list)
+        '''
+        if not isVaild(text):return False
+        return self.parser.cmdMath(text)
+
+cmdRegistry = Registry()
 
 #endregion

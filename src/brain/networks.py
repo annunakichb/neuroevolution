@@ -7,6 +7,8 @@ from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
 
+
+__all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
 # 网络类型
 class NetworkType(Enum):
     # 感知机
@@ -32,69 +34,19 @@ class DefaultIdGenerator:
 
         self.netid += 1
         return self.netid
-    def getNeuronId(self,net,coord):
+    def getNeuronId(self,net,coord,synapse):
         self.neuronId += 1
         return self.neuronId
     def getSynapseId(self,net,fromId,toId):
         self.synapseId += 1
         return self.synapseId
 
-#无重复的id生成器，
-class NeatIdGenerator:
-    def __init__(self):
-        '''
-        无重复的id生成器，网络id按序，同样坐标的神经元id相同，同样连接的突触id相同
-        '''
-        self.netid = 0
-        self.neuronId = 0
-        self.synapseId = 0
-        self.synapseIdcaches = {}
-        self.neuronIdcaches = {}
 
-    def getNetworkId(self):
-        '''
-        取得网络id
-        :return:
-        '''
-        self.netid += 1
-        return self.netid
-
-    def getNeuronId(self,net,coord):
-        '''
-        取得神经元id
-        :param net:
-        :param coord:
-        :return:
-        '''
-        for pos,id in self.neuronIdcaches:
-            if pos == coord:return id
-        self.neuronId += 1
-        self.neuronIdcaches[coord] = self.neuronId
-        return self.neuronId
-
-    def getSynapseId(self,net,fromId,toId):
-        '''
-        取得突触id
-        :param net:
-        :param fromId:
-        :param toId:
-        :return:
-        '''
-        if fromId in self.synapseIdcaches.keys():
-            t = self.synapseIdcaches[fromId]
-            if toId in t.keys():
-                return t[toId]
-
-        self.synapseId += 1
-        if not fromId in self.synapseIdcaches.keys():
-            self.synapseIdcaches[fromId] = {}
-        self.synapseIdcaches[fromId][toId] = self.synapseId
-        return self.synapseId
 
 
 idGenerators = Registry()
 idGenerators.register(DefaultIdGenerator(),'default')
-idGenerators.register(NeatIdGenerator(),'neat')
+
 
 
 #endregion
@@ -349,7 +301,7 @@ class NeuralNetwork:
         if synapse.id <= 0:
             idGenerator = self.definition.get('idGenerator', 'default')
             if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(synapse)):idGenerator无效")
-            synapse.id = idGenerator.getSynapseId(net,synapse.fromId,synapse.toId)
+            synapse.id = idGenerator.getSynapseId(self,synapse.fromId,synapse.toId)
 
         # 检查是否已经存在
         s = self.getSynapse(fromId=synapse.fromId,toId=synapse.toId)
@@ -462,6 +414,23 @@ class NeuralNetwork:
         n = Neuron(idGenerator.getNeuronId(self,coord),layer,birth,neuronModelConfig,coord)
         return self.put(n,inids,outinds,synapseModelConfig)
 
+
+    def remove(self,ele):
+        if ele is None:return
+        if ele is Synapse:
+            self.synapses.remove(ele)
+            return
+        if ele is Neuron:
+            input_sypanses = self.getInputSynapse(ele.id)
+            output_sypanses = self.getOutputSynapse(ele.id)
+            synapses = [].extend(input_sypanses)
+            synapses.extend(output_sypanses)
+            collections.foreach(synapses,lambda s:self.remove(s))
+            for ns in self.neurons:
+                for n in ns:
+                    if n == ele:
+                        ns.remove(n);
+                        return
 
 
     #endregion

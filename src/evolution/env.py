@@ -1,4 +1,6 @@
 
+
+__all__ = ['EvaluationValue','Evaluator']
 #个体评估值
 class EvaluationValue:
     def __init__(self,maxsize=3):

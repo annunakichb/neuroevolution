@@ -5,6 +5,7 @@ from ..utils import strs as strs
 from ..utils import collections as collections
 import  brain.models as models
 
+__all__ = ['NueralElement','Neuron','Synapse']
 # 神经系统基本元素
 class NueralElement:
     def __init__(self,id,birth,modelConfiguration,coord=None):

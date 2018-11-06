@@ -5,6 +5,15 @@ from .strs import *
 
 __all__ = ['first','findall','listtostr','dicttostr']
 
+#region 字段扩展
+
+def dict_getattr(self, item):
+    return self[item]
+
+def dict_setattr(self,item,value):
+    self[item] = value
+
+#endregion
 
 #region 集合中查询
 

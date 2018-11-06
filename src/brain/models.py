@@ -5,7 +5,7 @@ from .activation import ActivationFunction
 from utils.properties import Registry
 
 
-
+__all__ = ['CommonInputNeurnModel','CommonHiddenNeuronModel','CommonSynapseModel','nervousModels']
 #region 普通神经元计算模型
 
 #普通输入模型

@@ -1,6 +1,9 @@
+from multiprocessing import Pool
 
 from utils.properties import Registry
 import utils.collections as collections
+
+__all__ = ['IndividualType','individualTypes','speciesType','Individual','Population','Specie']
 
 #region 个体信息
 
@@ -81,11 +84,13 @@ class Individual:
 
 #region 种群信息
 class Population:
+    __slots__ = ['params','inds','features','eliest','species']
     def __init__(self,params,initInds):
         self.params = params
         self.inds = initInds
         self.features = {}
         self.eliest = []
+        self.species = []
 
     @classmethod
     def create(cls,popParam):
@@ -101,8 +106,15 @@ class Population:
         if popParam.genomeFactory is not None:
             genomeFactory = popParam.genomeFactory
         # 创建个体集合和种群
-        inds = genomeFactory.create(popParam)
+        genomes = genomeFactory.create(popParam)
+        inds = map(lambda genome:Individual(genome.id,0,genome,popParam.indTypeName),genomes)
         return Population(popParam,inds)
+
+    def getInd(self,id):
+        return collections.first(self.inds,lambda ind:ind.id == id)
+
+    def getSpecie(self):
+        return self.species
 
     def evaulate(self,session):
         '''
@@ -113,15 +125,25 @@ class Population:
         # 遍历每一个评估项
         for key,evoluator in self.params.features.items():
             # 对每一个个体计算评估值
-            for ind in self.inds:
-                value = evoluator.calacute(ind,session)
-                ind[key] = value
+            if session.runParam.evalate.parallel>0:
+                pool = Pool(session.runParam.evalate.parallel)
+                jobs = []
+                collections.foreach(self.inds,lambda ind: jobs.append(self.pool.apply_async(self.__doIndEvaulate, (ind, key,evoluator,session))))
+                pool.join()
+                pool.close()
+            else:
+                for ind in self.inds:
+                    value = evoluator.calacute(ind,session)
+                    ind[key] = value
+
+
             # 计算所有个体评估值的平均，最大和最小
             max,avg,min = collections.rangefeature(map(lambda i:i[key],self.inds))
             self[key] = {}
             self[key]['max'] = max
             self[key]['average'] = avg
             self[key]['min'] = min
+
         # 按照适应度值排序
         self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
 
@@ -129,12 +151,54 @@ class Population:
         eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else session.popParam.elitistSize * session.popParam.size
         self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
 
+    def __doIndEvaulate(self,ind,key,evoluator,session):
+        value = evoluator.calacute(ind, session)
+        ind[key] = value
+
     def __getitem__(self, item):
         if item in self.features.keys():
             return self.features[item].value
+
+        ind = self.getInd(item)
+        if ind is not None:return ind
+
         return super.__getitem__(item)
 
     def __setitem__(self, key, value):
         self.features[key] = value
+
+# 物种
+class Specie:
+    __slots__ = ['id','inds','pop','features']
+    def __init__(self,id,inds,pop):
+        '''
+        物种
+        :param id:    int 物种id
+        :param inds:  list  of int or list of Individuals 属于该种群的个体
+        :param pop:   物种
+        '''
+        self.id = id
+        self.pop = pop
+        self.targetSize = 0
+        if not collections.isEmpty(inds):
+            self.indids = map(lambda ind:ind.id if ind is Individual else ind,inds)
+        self.features = {}
+        self.__doEvaulate()
+
+    def __doEvaulate(self):
+        '''
+        计算物种的适应度等指标
+        :return:
+        '''
+        for key, evoluator in self.pop.params.features.items():
+            fitnesses = map(lambda indid:self.pop[indid]['fitness'],self.inds)
+            max, avg, min = collections.rangefeature(fitnesses)
+            self[key]['max'] = max
+            self[key]['average'] = avg
+            self[key]['min'] = min
+
+
+
+
 
 #endregion

@@ -8,8 +8,13 @@ from evolution.agent import Individual
 from evolution.agent import Population
 from evolution.montior import  Monitor
 
+__all__ = ['operationRegistry','operationGraphis','Session','EvolutionTask']
+
+
 # 操作注册表
 operationRegistry = Registry()
+# 操作顺序图注册表
+operationGraphis = Registry()
 
 # 进化session
 class Session:
@@ -90,8 +95,9 @@ class Session:
             self.monitor.recordSpecies(species)
 
         # 启动进化线程
-        self.thread = threading.Thread(target=self.loop, name='session'+self.taskxh)
-        self.thread.start()
+        #self.thread = threading.Thread(target=self.loop, name='session'+self.taskxh)
+        #self.thread.start()
+        self.loop()
 
     #endregion
 
@@ -155,7 +161,7 @@ class Session:
 
 # 进化任务
 class EvolutionTask:
-    def __init__(self,count,popParam):
+    def __init__(self,count,popParam,callback):
         '''
         进化任务，一个进化任务是将多次执行进化，每次进化为一个session
         :param count:     int 运行次数
@@ -169,6 +175,7 @@ class EvolutionTask:
         self.curSession = None
 
         self.monitor = None
+        self.callback = callback
 
 
     def execute(self,runParam):
@@ -178,11 +185,12 @@ class EvolutionTask:
         :return:
         '''
         self.runParam = runParam
-        self.monitor = Monitor(self)
+        self.monitor = Monitor(self,callback = self.callback)
 
         self.monitor.recordTaskBegin()
         for i in range(self.count):
             session = Session(self.popParam,self.runParam,self,i,monitor)
+            self.curSession = session
 
             monitor = session.run()
             monitor.command()
