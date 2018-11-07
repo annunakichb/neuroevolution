@@ -92,7 +92,7 @@ class NeatSelection():
         # 对所有个体按照适应度从高到低排序
         session.pop.inds.sort(func=lambda x:x['fitness']+0.000001 if x in session.pop.eliest else 0,reverse = True)
         # 为每个个体计算一个选择概率（适应度越高和越低的被选择的概率就高）
-        fitnesssum = sum(map(lambda ind:ind('fitness'),session.pop.inds))
+        fitnesssum = sum(list(map(lambda ind:ind('fitness'),session.pop.inds)))
         mutateSelProb = [1-(ind['fitness']/fitnesssum) for index,ind in enumerate(session.pop.inds)]
         np.random.seed(0)
         p = np.array(mutateSelProb)

@@ -1,7 +1,11 @@
 from multiprocessing import Pool
 
+from evolution.env import EvaluationValue
+
 from utils.properties import Registry
 import utils.collections as collections
+
+import  numpy as np
 
 __all__ = ['IndividualType','individualTypes','speciesType','Individual','Population','Specie']
 
@@ -9,7 +13,7 @@ __all__ = ['IndividualType','individualTypes','speciesType','Individual','Popula
 
 #个体类型
 class IndividualType:
-    def __init__(self,name,genomeType,genomeFactory,phenomeType,genomeDecoder):
+    def __init__(self,name,genomeType,genomeFactory,phenomeType,genomeDecoder=None):
         '''
         个体元信息
         :param name:                       str 个体类型名
@@ -78,7 +82,13 @@ class Individual:
         return super.__getitem__(item)
 
     def __setitem__(self, key, value):
-        self.features[key] = value
+        if key not in self.features.keys():
+            self.features[key] = EvaluationValue()
+        self.features[key].append(value)
+
+    def getFeature(self,name):
+        return self.features.get(name)
+
 
 #endregion
 
@@ -107,7 +117,7 @@ class Population:
             genomeFactory = popParam.genomeFactory
         # 创建个体集合和种群
         genomes = genomeFactory.create(popParam)
-        inds = map(lambda genome:Individual(genome.id,0,genome,popParam.indTypeName),genomes)
+        inds = list(map(lambda genome:Individual(genome.id,0,genome,popParam.indTypeName),genomes))
         return Population(popParam,inds)
 
     def getInd(self,id):
@@ -138,11 +148,12 @@ class Population:
 
 
             # 计算所有个体评估值的平均，最大和最小
-            max,avg,min = collections.rangefeature(map(lambda i:i[key],self.inds))
+            max,avg,min,stdev = collections.rangefeature(list(map(lambda i:i[key],self.inds)))
             self[key] = {}
             self[key]['max'] = max
             self[key]['average'] = avg
             self[key]['min'] = min
+            self[key]['stdev'] = stdev
 
         # 按照适应度值排序
         self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
@@ -156,16 +167,42 @@ class Population:
         ind[key] = value
 
     def __getitem__(self, item):
-        if item in self.features.keys():
-            return self.features[item].value
-
+        '''
+        如果item是个体id，则返回个体对象；如果是feature名称，则返回fature值
+        :param item:
+        :return:
+        '''
         ind = self.getInd(item)
-        if ind is not None:return ind
+        if ind is not None: return ind
+
+        if item in self.features.keys():
+            if self.features[item] is EvaluationValue:
+                return self.features[item].value
+            else:
+                return self.features[item]
 
         return super.__getitem__(item)
 
     def __setitem__(self, key, value):
-        self.features[key] = value
+        if key not in self.features.keys():
+            self.features[key] = value
+
+        if value is float:
+            self.features[key] = EvaluationValue()
+            self.features[key].append(value)
+        else:
+            self.features[key] = value
+
+    def getFeature(self,key,name):
+        if key not in self.features.keys():
+            return None
+
+        if self.features[key] is EvaluationValue:
+            return self.features[key]
+        if self.features[key] is dict:
+            return self.features[key][name]
+
+
 
 # 物种
 class Specie:
@@ -181,7 +218,7 @@ class Specie:
         self.pop = pop
         self.targetSize = 0
         if not collections.isEmpty(inds):
-            self.indids = map(lambda ind:ind.id if ind is Individual else ind,inds)
+            self.indids = list(map(lambda ind:ind.id if ind is Individual else ind,inds))
         self.features = {}
         self.__doEvaulate()
 
@@ -191,7 +228,7 @@ class Specie:
         :return:
         '''
         for key, evoluator in self.pop.params.features.items():
-            fitnesses = map(lambda indid:self.pop[indid]['fitness'],self.inds)
+            fitnesses = list(map(lambda indid:self.pop[indid]['fitness'],self.inds))
             max, avg, min = collections.rangefeature(fitnesses)
             self[key]['max'] = max
             self[key]['average'] = avg

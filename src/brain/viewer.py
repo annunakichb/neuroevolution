@@ -1,5 +1,5 @@
 
-import graphviz
+import pygraphviz
 
 class NetworkView:
     def __init__(self):
@@ -29,7 +29,7 @@ class NetworkView:
 
 
     def drawNet(self,net,fmt='svg',filename=None,view=True):
-        dot = graphviz.Digraph(format=fmt, node_attr=self.node_attrs)
+        dot = pygraphviz.Digraph(format=fmt, node_attr=self.node_attrs)
         #画输入节点
         ns = net.neurons[0]
         for i,input in enumerate(ns):

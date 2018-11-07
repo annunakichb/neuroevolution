@@ -1,39 +1,67 @@
-#!/usr/bin/python3
+from domains.ne.cartpoles.cartpole import SingleCartPole
+import domains.ne.cartpoles.cartpole as cartpole
 
 import ne
 import ne.neat as neat
-import ne.callbacks as callbacks
 from brain.networks import NetworkType
 from brain.networks import NeuralNetwork
 from brain.runner import NeuralNetworkTask
 from evolution.env import Evaluator
 from evolution.session import EvolutionTask
-from utils.properties import Properties
 
-# 定义适应度评估函数
+
+# 适应度计算函数
 def fitness(ind,session):
-    net = ind.genome
-    nettask = net.doTest()
-    accuracy = nettask[NeuralNetworkTask.INDICATOR_ACCURACY]
-    return accuracy
-    #if accuracy >= 1.0:return 100
-    #return (4 - 4 * nettask[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR]) + 10 * accuracy
+    net = ind.getPhenome()
+
+    fitnesses = []
+    runs_per_net = 5
+    simulation_seconds = 60.0
+
+    for runs in range(runs_per_net):
+        sim = SingleCartPole()
+
+        # Run the given simulation for up to num_steps time steps.
+        fitness = 0.0
+        while sim.t < simulation_seconds:
+            inputs = sim.get_scaled_state()
+            net.definition.task.test_x = inputs
+            action = net.doTest()
+
+            # Apply action to the simulated cart-pole
+            force = cartpole.discrete_actuator_force(action)
+            sim.step(force)
+
+            # Stop if the network fails to keep the cart within the position or angle limits.
+            # The per-run fitness is the number of time steps the network can balance the pole
+            # without exceeding these limits.
+            if abs(sim.x) >= sim.position_limit or abs(sim.theta) >= sim.angle_limit_radians:
+                break
+
+            fitness = sim.t
+        fitnesses.append(fitness)
+    return min(fitnesses)
+
+# 记录最优个体的平衡车运行演示视频
+def callback(event,monitor):
+    ne.callbacks(event,monitor)
+    if event == 'session.end':
+        filename = 'singlecartpole.session.'+ str(monitor.evoTask.curSession.taskxh)+'.mov'
+        eliest = monitor.evoTask.curSession.pop.eliest
+        cartpole.make_movie(eliest[0].getPhenome(),filename)
 
 def run():
     # 初始化neat算法模块
     neat.neat_init()
 
     # 定义网络训练任务
-    train_x = [[0,0],[0,1],[1,0],[1,1]]
-    train_y = [0,1,1,0]
-    test_x = [[0,0],[0,1],[1,0],[1,1]]
-    test_y = [0,1,1,0]
-    task = NeuralNetworkTask(train_x,train_y,test_x,test_y)
+
+    task = NeuralNetworkTask()
 
     # 定义网络
     netdef = {
         'netType' : NetworkType.Perceptron,                       # NetworkType，网络类型,必须
-        'neuronCounts' : [2,1],                                   # list（初始）网络各层神经元数量,必须
+        'neuronCounts' : [4,1,1],                                 # list（初始）网络各层神经元数量,必须
         'idGenerator' :  'neat',                                  # str 生成网络，神经元，突触id的类，参见DefauleIDGenerator,list idgenerator命令可以列出所有的id生成器对象
         'config' : {
             'layered' : True,                                     # bool 是否分层,可选
@@ -69,7 +97,6 @@ def run():
             }
         }
     }
-    netdef = Properties(netdef)
 
     # 定义种群
     popParam = {
@@ -86,10 +113,9 @@ def run():
             'size':0                                              #物种个体数量限制，0表示无限制或动态
         },
         'features':{                                              # 特征评估函数配置，必须
-            'fitness' : Evaluator('fitness',[(fitness,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
+            'fitness' : Evaluator('fitness',{fitness,1.0})        # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
     }
-    popParam = Properties(popParam)
 
     # 定于运行参数
     runParam = {
@@ -124,13 +150,13 @@ def run():
             'deleteconnection':0.1                            # 删除连接的概率
         },
         'weight':{
-          'epoch':50,                                         # 权重调整次数
+          'epoch':5,                                          # 权重调整次数
         }
     }
     }
-    runParam  = Properties(runParam)
 
-    evolutionTask = EvolutionTask(10,popParam,callbacks.neat_callback)
+
+    evolutionTask = EvolutionTask(10,popParam,neat.callbacks.neat_callback)
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':

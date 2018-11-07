@@ -1,10 +1,9 @@
 import numpy as np
 from functools import reduce
 import re
-from .collections import *
-from .strs import *
+from utils import strs
 
-__all__ = ['NameInfo','Range','PropertyInfo','Variable']
+__all__ = ['NameInfo','Range','PropertyInfo','Variable','Properties']
 
 class NameInfo:
     __slots__ = ['name','caption','description','cataory','alias']
@@ -18,9 +17,9 @@ class NameInfo:
         :param cataory:      分类
         :param alias:        别名list
         '''
-        self.name = vaild(name)
-        self.caption = vaild(caption,self.name)
-        self.description = vaild(description,self.name)
+        self.name = strs.vaild(name)
+        self.caption = strs.vaild(caption,self.name)
+        self.description = strs.vaild(description,self.name)
         self.cataory = cataory
         self.alias = alias
 
@@ -33,11 +32,11 @@ class NameInfo:
         :return:
         '''
         if name is None:return False
-        if equals(name,self.name):return True
+        if strs.vequals(name,self.name):return True
         if not allName:return False
-        if equals(name,self.caption):return True
+        if strs.equals(name,self.caption):return True
         if self.alias is None or len(self.alias)<=0:return False
-        return reduce(lambda x, y: x or y, map(lambda x: equals(x,name), self.alias))
+        return reduce(lambda x, y: x or y, map(lambda x: strs.equals(x,name), self.alias))
 
     def __eq__(self, other):
         '''
@@ -65,15 +64,12 @@ class NameInfo:
         用于调试打印详细信息
         :return:
         '''
-        return self.name + '' if not isVaild(self.description) else '(' + self.description + ')'
-
-
-
+        return self.name + '' if not strs.isVaild(self.description) else '(' + self.description + ')'
 
 
 class Range:
     #? 正则定义有问题
-    regax = '(\S*)' + '([|(){1}' + '([-]\d+\.\d+){1}' + ':' + '([-]\d+\.\d+){1}' + '[:([-]\d+\.\d+){1}]' + '(]|)){1}'
+    regax = r'(\S*)'  + r'([|\(){1}' + r'([-]\d+\.\d+){1}' + ':' + r'([-]\d+\.\d+){1}' + r'(:[-]\d+\.\d+)?' + r'(]|\)){1}'
     pattern = re.compile(regax)
     def __init__(self,range):
         '''
@@ -89,7 +85,7 @@ class Range:
         self.__list = []
         self.__stepMode = 'step'
 
-        if not isVaild(range):return
+        if not strs.isVaild(range):return
         m = Range.pattern.match(range)    #？未校验错误
         self.distributionName = m.group(0)
         self.begin = m.group(1)
@@ -130,7 +126,7 @@ class PropertyInfo:
         self.props = props if props is not None else {}
 
 class Variable(PropertyInfo):
-    def __init__(self,xh,nameInfo,type,default,value=None,storeformats={},range = None,getter=None,setter=None,**props):
+    def __init__(self,nameInfo,type=float,default=0.0,xh=1,value=None,storeformats={},range = None,getter=None,setter=None,**props):
         '''
         变量,参数意义参见PropertyInfo
         :param xh:
@@ -144,7 +140,7 @@ class Variable(PropertyInfo):
         :param setter:
         :param props:
         '''
-        super(xh,nameInfo,type,default,getter,setter,storeformats,range,props)
+        super(Variable, self).__init__(xh, nameInfo, type, default, storeformats, range, getter, setter , **props)
         self.value = value
 
     def __str__(self):
@@ -169,8 +165,8 @@ class Registry:
         :return: None
         '''
         if obj is None:return
-        if name == '':name = getName(obj)
-        if not isVaild(name):return
+        if name == '':name = strs.getName(obj)
+        if not strs.isVaild(name):return
         self.__tables__[name] = obj
 
     def find(self,name,default=None,setifnotexist=True):
@@ -181,7 +177,7 @@ class Registry:
         :param setifnotexist:  如果找不到，是否将default记录（下次就可以找到）
         :return: 注册的对象
         '''
-        if not isVaild(name):return default
+        if not strs.isVaild(name):return default
         if name in self.__tables__.keys():
             return self.__tables__[name]
 
@@ -191,3 +187,21 @@ class Registry:
 
     def keys(self):
         return self.__tables__.keys()
+
+#region 字典扩展
+class Properties(dict):
+    def __init__(self, *args, **kwargs):
+        super(Properties, self).__init__(*args, **kwargs)
+
+    def __getattr__(self, name):
+        value = self[name]
+        if isinstance(value, dict):
+            value = Properties(value)
+        return value
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+
+
+#endregion

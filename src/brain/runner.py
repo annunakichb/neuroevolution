@@ -1,7 +1,8 @@
 
 from enum import Enum
-from ..utils import collections
-from ..utils.properties import Registry
+from utils import collections
+from utils.properties import Registry
+from utils.strs import ExtendJsonEncoder
 
 import brain.models as models
 
@@ -32,7 +33,7 @@ class NeuralNetworkTask:
 
     #region 初始化
 
-    def __init__(self,train_x,train_y,test_x,test_y):
+    def __init__(self,train_x=[],train_y=[],test_x=[],test_y=[]):
         '''
         神经网训练任务
         :param train_x:   训练样本
@@ -92,12 +93,12 @@ class NeuralNetworkTask:
 
 # 简单前馈神经网络运行期
 class SimpleNeuralNetworkRunner:
-    def __init__(self,runParam):
+    def __init__(self):
         '''
         简单前馈神经网络运行器（要求神经网络无自连接，无循环，全部都是前馈连接）
-        :param runParam:
         '''
-        self.runParam = runParam
+        pass
+
     def doLearn(self,net,task):
         '''
         未实现
@@ -157,7 +158,7 @@ class SimpleNeuralNetworkRunner:
             # 将没结果的输出神经元的值设置为0
             collections.foreach(outputNeurons,lambda n:exec("n['value']=0"))
             # 取得结果
-            outputs = map(lambda n:n['value'],outputNeurons)
+            outputs = list(map(lambda n:n['value'],outputNeurons))
             task.setTestResult(index,outputs)
 
         task.__doTestStat__()
@@ -172,3 +173,4 @@ class TensorflowNeuralNetworkRunner:
 runners = Registry()
 runners.register(SimpleNeuralNetworkRunner(),'simple')
 
+ExtendJsonEncoder.ignoreTypes.append(NeuralNetworkTask)

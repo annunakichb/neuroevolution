@@ -1,8 +1,10 @@
-
+from enum import Enum
+import json
 from .properties import *
 from .properties import Registry
+from utils import collections
 
-__all__ = ['FORMAT','isVaild','vaild','equals','getName','format']
+__all__ = ['FORMAT','isVaild','vaild','equals','getName','format','ExtendJsonEncoder']
 
 
 
@@ -15,10 +17,10 @@ def isVaild(str):
     :param str: 字符串，None，''和只有空格的字符串都是无效字符串
     :return:
     '''
-    if str is None:return True
-    if str == '':return True
-    if str.strip() == '':return True
-    return False
+    if str is None:return False
+    if str == '':return False
+    if str.strip() == '':return False
+    return True
 
 # 字符串有效性处理
 def vaild(str,default=''):
@@ -138,5 +140,20 @@ class Command:
         return self.parser.cmdMath(text)
 
 cmdRegistry = Registry()
+
+#endregion
+
+#region json扩展
+class ExtendJsonEncoder(json.JSONEncoder):
+    ignoreTypes = []
+    autostrTypes = []
+    def default(self, obj):
+        if isinstance(obj,Enum):
+            return str(obj)
+        if collections.any(ExtendJsonEncoder.ignoreTypes,lambda t:isinstance(obj,t)):
+            return None
+        if collections.any(ExtendJsonEncoder.autostrTypes,lambda t:isinstance(obj,t)):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
 
 #endregion

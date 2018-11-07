@@ -3,8 +3,9 @@
 
 import math
 import random
-from ..utils.properties import NameInfo
-from ..utils.collections import *
+from utils.properties import NameInfo
+from utils.properties import Registry
+from utils.collections import *
 
 __all__ = ['ActivationFunction','Gaussian','Sigmod','activations']
 #region 激活函数管理
@@ -147,8 +148,6 @@ class Sigmod(ActivationFunction):
 #endregion
 
 #注册的激活函数
-activations = {
-                  Gaussian.nameInfo:Gaussian(),
-                  Sigmod.nameInfo:Sigmod()
-
-              }
+activations = Registry()
+activations.register(Gaussian(),Gaussian.nameInfo.name)
+activations.register(Sigmod(),Sigmod.nameInfo.name)

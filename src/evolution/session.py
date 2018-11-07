@@ -2,11 +2,14 @@ import logging
 import time, threading
 
 from utils.properties import Registry
+from utils.properties import Properties
 import evolution.agent as agent
 from evolution.agent import IndividualType
 from evolution.agent import Individual
 from evolution.agent import Population
 from evolution.montior import  Monitor
+from evolution.env import EvaluationValue
+from evolution.env import Evaluator
 
 __all__ = ['operationRegistry','operationGraphis','Session','EvolutionTask']
 
@@ -38,6 +41,7 @@ class Session:
         self.thread = None
         self.monitor = monitor
 
+        self.popRecords = []
         self.operationRecords = {}
         self.exitCode = 0
         self.exitMsg = ''
@@ -51,6 +55,7 @@ class Session:
         self.curTime = 0
         self.monitor.reset()
         self.operationRecords = {}
+        self.popRecords = []
 
     #endregion
 
@@ -72,8 +77,8 @@ class Session:
         self.monitor.recordSessionBegin()
 
         # 显示参数信息
-        self.monitor.recordParam('基因参数',self.popParam.genomeParam)
-        self.monitor.recordParam('种群参数',self.popParam,'genomeParam')
+        # self.monitor.recordParam('基因参数',self.popParam.genomeDefinition,'task')
+        self.monitor.recordParam('种群参数',self.popParam,['task'])
         self.monitor.recordParam('运行参数',self.runParam)
 
         # 创建种群
@@ -87,6 +92,7 @@ class Session:
         self.pop.evaulate(self)
         self.monitor.recordPopulationFeatures()
         self.monitor.recordIndividuals()
+        self.popRecords.append(self.__createPopRecord())
 
         # 进行种群划分
         speciesMethod = agent.speciesType.find(self.popParam.species.method)
@@ -157,6 +163,15 @@ class Session:
         :return:
         '''
         return self.runParam.operations.text.spilt(',')
+
+    def __createPopRecord(self):
+        r = {}
+        for featureKey in self.pop.params.features.keys():
+            r[featureKey] = {}
+            r[featureKey]['max'] = self.pop[featureKey]['max']
+            r[featureKey]['average'] = self.pop[featureKey]['average']
+            r[featureKey]['min'] = self.pop[featureKey]['min']
+        return r
     #endregion
 
 # 进化任务
@@ -177,6 +192,7 @@ class EvolutionTask:
         self.monitor = None
         self.callback = callback
 
+        self.__verifyParam()
 
     def execute(self,runParam):
         '''
@@ -189,7 +205,7 @@ class EvolutionTask:
 
         self.monitor.recordTaskBegin()
         for i in range(self.count):
-            session = Session(self.popParam,self.runParam,self,i,monitor)
+            session = Session(self.popParam,self.runParam,self,i,self.monitor)
             self.curSession = session
 
             monitor = session.run()
@@ -198,6 +214,13 @@ class EvolutionTask:
             self.sessions.append(session)
 
         self.monitor.recordTaskEnd()
+
+    def __verifyParam(self):
+        if self.popParam is None:
+            raise  RuntimeError('进化任务对象的popParam不能为空');
+        if not isinstance(self.popParam,Properties):
+            raise RuntimeError('进化任务对象的popParam类型必须为Properties');
+
 
 
 

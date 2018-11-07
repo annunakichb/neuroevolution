@@ -1,4 +1,5 @@
-
+from functools import reduce
+from utils.strs import ExtendJsonEncoder
 
 __all__ = ['EvaluationValue','Evaluator']
 #个体评估值
@@ -71,15 +72,21 @@ class Evaluator:
         '''
         self.key = key
         if evaulateFunctions is None:raise  RuntimeError('创建评估器对象失败：评估函数参数无效')
-        if evaulateFunctions is function:
-            self.evaulateFunctions = {evaulateFunctions:1.0}
-        elif evaulateFunctions is dict:
+        if isinstance(evaulateFunctions,list):
             self.evaulateFunctions = evaulateFunctions
+        elif callable(evaulateFunctions):
+            self.evaulateFunctions = [(evaulateFunctions,1.0)]
+        else:
+            self.evaulateFunctions = None
+
+    def __str__(self):
+        return "Evaluator('" + self.key + "',[" + reduce(lambda x,y:x+","+y,map(lambda x:"("+x[0].__name__+","+str(x[1])+")",self.evaulateFunctions)) + "])"
+
 
     def getFuncsAndWeights(self):
         '''
         取得函数和权重
-        :return: dict key是函数，value是权重float
+        :return: [(key,value),(key,value)] key是函数，value是权重float
         '''
         return self.evaulateFunctions
 
@@ -88,7 +95,7 @@ class Evaluator:
         取得所有函数
         :return:
         '''
-        return self.evaulateFunctions.keys()
+        return list(map(lambda x:x[0],self.evaulateFunctions))
 
     def calacute(self,ind,session):
         '''
@@ -98,6 +105,8 @@ class Evaluator:
         :return:           float 评估值
         '''
         result = 0.0
-        for func,weight in self.evaulateFunctions:
+        for (func,weight) in self.evaulateFunctions:
             result += weight * func(ind,session)
         return result
+
+ExtendJsonEncoder.autostrTypes.append(Evaluator)

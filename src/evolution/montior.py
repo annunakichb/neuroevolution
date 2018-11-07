@@ -9,9 +9,11 @@ from pygments.lexers import sql
 import utils.collections as collections
 import utils.files as files
 import utils.strs as strs
+from utils.strs import ExtendJsonEncoder
 
 
 __all__ = ['Monitor']
+
 
 class Monitor:
 
@@ -29,8 +31,9 @@ class Monitor:
         return self.operationResult[name]
 
     def __createLogger(self):
-        logging.basicConfig(level=logging.DEBUG)
         LOG_FORMAT = "%(message)s"
+        logging.basicConfig(level=logging.DEBUG,format=LOG_FORMAT)
+
 
         logger = logging.getLogger('monitor')
         logger.setLevel(logging.DEBUG)
@@ -40,10 +43,10 @@ class Monitor:
         f_handler.setFormatter(logging.Formatter(LOG_FORMAT))
         logger.addHandler(f_handler)
 
-        s_Handler = logging.StreamHandler()
-        s_Handler.setLevel(logging.DEBUG)
-        s_Handler.setFormatter(logging.Formatter(LOG_FORMAT))
-        logger.addHandler(s_Handler)
+        #s_Handler = logging.StreamHandler()
+        #s_Handler.setLevel(logging.DEBUG)
+        #s_Handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        #logger.addHandler(s_Handler)
 
         return logger
 
@@ -55,9 +58,9 @@ class Monitor:
         return files.getFullFileName('task.log','/log')
 
     def __recordSection(self,stageName,**kwdatas):
-        contents = '阶段名称:'+stageName + \
-                    ',进化时间:'+str(int(self.evoTask.curSession.curTime)) + \
-                    ',实际时间:'+time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
+        contents = '事件 = '+stageName + \
+                    ',年代 = '+('' if self.evoTask.curSession is None else str(int(self.evoTask.curSession.curTime))) + \
+                    ',时间 = '+time.strftime('%H:%M:%S',time.localtime(time.time()))
 
         self.logger.info(contents)
 
@@ -69,13 +72,14 @@ class Monitor:
         self.logger.debug('调试信息('+module+"):"+debugName+":"+debugInfo)
 
     def recordSessionBegin(self):
-        self.__recordSection('Session开始',编号=str(self.evoTask.curSession.taskxh))
+        self.__recordSection('Session开始',Session编号=str(self.evoTask.curSession.taskxh))
         if self.callback is not None:self.callback('session.begin',self)
 
 
-    def recordParam(self,name,dict,ignoreKeys):
-        encode_json = json.dumps(obj=dict,skipkeys=ignoreKeys)
-        self.__recordSection('记录参数',name=encode_json)
+    def recordParam(self,name,dict,ignoreKeys=[]):
+        encode_json = json.dumps(obj=dict,skipkeys=ignoreKeys,cls=ExtendJsonEncoder,indent=True)
+        kwdata = {name:encode_json}
+        self.__recordSection('记录参数',**kwdata)
         if self.callback is not None: self.callback('param.record', self)
 
     def recordPopulationCreate(self,pop,exception=None):

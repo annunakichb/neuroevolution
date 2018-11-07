@@ -1,9 +1,12 @@
-import collections
 import json
 from functools import reduce
+import  copy
 from .strs import *
 
-__all__ = ['first','findall','listtostr','dicttostr']
+import  numpy as np
+
+__all__ = ['first','findall','count','foreach','isEmpty','listtostr','listtostr','dicttostr','rangefeature',
+            'dicttostr','dict_getattr','dict_setattr','equals','all']
 
 #region 字段扩展
 
@@ -81,7 +84,7 @@ def isEmpty(the_iterable):
     :param the_iterable:
     :return:
     '''
-    return the_iterable is not None and len(the_iterable)>0
+    return the_iterable is None or len(the_iterable) <= 0
 
 # 比较两个list是否相等
 def equals(list1,list2,lenmatch=True):
@@ -115,8 +118,21 @@ def all(the_iterable, condition = lambda x: True):
     if the_iterable is None or len(the_iterable)<=0:
         return False
     for i in the_iterable:
-        if condition(i):return False
+        if not condition(i):return False
     return True
+
+def any(the_iterable, condition = lambda x: True):
+    '''
+    判断集合是否满足某性质
+    :param the_iterable:
+    :param condition:
+    :return:
+    '''
+    if the_iterable is None or len(the_iterable)<=0:
+        return False
+    for i in the_iterable:
+        if condition(i):return True
+    return False
 
 #endregion
 
@@ -176,6 +192,8 @@ def dicttostr(dict,**props):
 def rangefeature(list):
     if isEmpty(list):return 0.0
     sum = reduce(lambda x,y:x+y,list)
-    return max(list),sum / len(list),min(list)
+    stdev = np.std(list, ddof=1)
+    return max(list),sum / len(list),min(list),stdev
 
 #endregion
+

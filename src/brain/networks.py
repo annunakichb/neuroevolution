@@ -1,7 +1,7 @@
 from enum import Enum
 import threading
 from functools import reduce
-from ..utils import collections as collections
+from utils import collections as collections
 from utils.properties import Registry
 from brain.elements import Synapse
 from brain.elements import Neuron
@@ -12,11 +12,11 @@ __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
 # 网络类型
 class NetworkType(Enum):
     # 感知机
-    Perceptron = 1,
+    Perceptron = 1
     # BP
-    BP = 2,
+    BP = 2
     # 带时延的网络
-    TPNN = 3,
+    TPNN = 3
     # 脉冲
     Spiking = 4
 
@@ -55,9 +55,8 @@ idGenerators.register(DefaultIdGenerator(),'default')
 class NeuralNetwork:
 
     #region 基本信息
-    MAX_LAYER = 99999                               #最大层，第一层是0层，因此总层数是该值+1
-    MAX_SUBSTRATE2D_SIZE = [MAX_LAYER,9999999]      #2D基座最大坐标范围
-    MAX_SUBSTRATE3D_SIZE = [MAX_LAYER,99999,99999]  #3D基座最大坐标范围
+    MAX_LAYER = 99999                                       #最大层，第一层是0层，因此总层数是该值+1
+    MAX_RANGE = [(0,MAX_LAYER),(0,9999999),(0,99999)]      #最大坐标范围
 
     def __init__(self,id,definition):
         '''
@@ -182,7 +181,7 @@ class NeuralNetwork:
         '''
         synapses = self.getInputSynapse(neuronId)
         if collections.isEmpty(synapses):return []
-        return map(lambda s:self.getNeuron(id=s.fromId),synapses)
+        return list(map(lambda s:self.getNeuron(id=s.fromId),synapses))
 
     def getNextNeuron(self,neuronId):
         '''
@@ -192,7 +191,7 @@ class NeuralNetwork:
         '''
         synapses = self.getOutputSynapse(neuronId)
         if collections.isEmpty(synapses): return []
-        return map(lambda s: self.getNeuron(id=s.toId), synapses)
+        return list(map(lambda s: self.getNeuron(id=s.toId), synapses))
 
 
 

@@ -1,8 +1,8 @@
 
 
 import copy
-from ..utils import strs as strs
-from ..utils import collections as collections
+from utils import strs as strs
+from utils import collections as collections
 import  brain.models as models
 
 __all__ = ['NueralElement','Neuron','Synapse']
@@ -32,8 +32,8 @@ class NueralElement:
         :return:
         '''
         if self.modelConfiguration is None: raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置无效')
-        if not strs.isVaild(self.modelConfiguration.modelId): raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置中modelId无效')
-        model = models.nervousModels.find(self.modelConfiguration.modelId)
+        if not strs.isVaild(self.modelConfiguration.modelid): raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置中modelId无效')
+        model = models.nervousModels.find(self.modelConfiguration.modelid)
         if model is None:raise RuntimeError('初始化计算模型失败(NueralElement.initModel):找不到模型:'+self.modelConfiguration.modelId)
         self.states = {} if model.initStates is None else model.initStates
         self.variables = copy.deepcopy(model.variables)
@@ -96,12 +96,13 @@ class Neuron(NueralElement):
         :param modelConfiguration:       dict          计算模型配置信息
         :param coord:                    geopy.Point   位置
         '''
-        super(id,birth,modelConfiguration,coord)
+        super(Neuron, self).__init__(id,birth,modelConfiguration,coord)
+        #super(id,birth,modelConfiguration,coord)
         self.layer = layer
 
     def __str__(self):
         stateStr = collections.dicttostr(self.states)
-        varStr = collections.listtostr(map(lambda v:v.__repr(),self.variables))
+        varStr = collections.listtostr(list(map(lambda v:v.__repr(),self.variables)))
         return 'Neuron'+str(id)+'[layer='+str(self.layer)\
                                +(','+stateStr if strs.isVaild(stateStr) else '') \
                                + (','+varStr if strs.isVaild(varStr) else '') + ']'
@@ -122,7 +123,8 @@ class Synapse(NueralElement):
         :param modelConfiguration:       dict          计算模型配置信息
         :param coord:                    geopy.Point   位置
         '''
-        super(id, birth, modelConfiguration, coord)
+        super(Synapse,self).__init__(id, birth, modelConfiguration, coord)
+        #super(id, birth, modelConfiguration, coord)
         self.fromId = fromId
         self.toId = toId
 
@@ -131,7 +133,7 @@ class Synapse(NueralElement):
 
     def __repr__(self):
         stateStr = collections.dicttostr(self.states)
-        varStr = collections.listtostr(map(lambda v: v.__repr(), self.variables))
+        varStr = collections.listtostr(list(map(lambda v: v.__repr(), self.variables)))
         return 'Synapse' + self.id + '[' + self.fromId + '->' + self.toId \
                + (',' + stateStr if strs.isVaild(stateStr) else '') \
                + (',' + varStr if strs.isVaild(varStr) else '') + ']'

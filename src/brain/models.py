@@ -1,7 +1,7 @@
-from ..utils import strs as strs
-from ..utils import collections as collections
-from ..utils.properties import *
-from .activation import ActivationFunction
+from utils import strs as strs
+from utils import collections as collections
+from utils.properties import *
+from brain.activation import ActivationFunction
 from utils.properties import Registry
 
 
@@ -11,6 +11,8 @@ __all__ = ['CommonInputNeurnModel','CommonHiddenNeuronModel','CommonSynapseModel
 #普通输入模型
 class CommonInputNeurnModel:
     nameInfo = NameInfo('input', cataory='common')
+    __initStates = {}
+    __variables = []
     def __init__(self,**configuration):
         '''
         普通输入模型
@@ -18,7 +20,8 @@ class CommonInputNeurnModel:
         '''
         self.nameInfo = CommonInputNeurnModel.nameInfo
         self.configuration = configuration if not collections.isEmpty(configuration) else {}
-
+        self.initStates = CommonInputNeurnModel.__initStates
+        self.variables = CommonInputNeurnModel.__variables
     def execute(self,neuron,net,**context):
         '''
         执行：对于没有输入的神经元，记录值为0，状态为未激活，返回0
@@ -44,9 +47,13 @@ class CommonInputNeurnModel:
 # 基本神经元计算模型（权重和加激活函数）
 class CommonHiddenNeuronModel:
     nameInfo = NameInfo('hidden', cataory='common')
+    __initStates = {}
+    __variables = [Variable(nameInfo='bias')]
     def __init__(self,**configuration):
         self.nameInfo = CommonHiddenNeuronModel.nameInfo
         self.configuration = configuration
+        self.initStates = CommonHiddenNeuronModel.__initStates
+        self.variables = CommonHiddenNeuronModel.__variables
 
     def execute(self,neuron,net,**context):
         '''
@@ -68,7 +75,7 @@ class CommonHiddenNeuronModel:
             return None
 
         # 取得突触所有输入值并求和(权重已经计算)
-        inputs = map(lambda s:s.states['value'],synapses)
+        inputs = list(map(lambda s:s.states['value'],synapses))
         sum = sum(inputs)
 
         # 加偏置
@@ -102,10 +109,13 @@ class CommonHiddenNeuronModel:
 
 class CommonSynapseModel:
     nameInfo = NameInfo('synapse', cataory='common')
+    __initStates = {}
+    __variables = [Variable(nameInfo='weight')]
     def __init__(self,**configuration):
         self.nameInfo = CommonSynapseModel.nameInfo
         self.configuration = configuration
-
+        self.initStates = CommonSynapseModel.__initStates
+        self.variables = CommonSynapseModel.__variables
     def execute(self,synapse,net,**context):
         '''
         执行：对于输入没有到达的突触，记录值为0，返回0
