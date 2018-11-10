@@ -66,8 +66,8 @@ class Session:
         if self.curTime >= self.runParam.terminated.maxIterCount:
             return True,'超过最大迭代次数'+str(self.runParam.terminated.maxIterCount)
 
-        if self.pop['feature']['max'] >= self.runParam.terminated.maxFitness:
-            return True,'达到最大适应度('+ str(self.pop['feature']['max']) + '>=' + str(self.runParam.terminated.maxFitness)
+        if self.pop['fitness']['max'] >= self.runParam.terminated.maxFitness:
+            return True,'达到最大适应度('+ str(self.pop['fitness']['max']) + '>=' + str(self.runParam.terminated.maxFitness)
 
         return False,''
 
@@ -98,7 +98,7 @@ class Session:
         speciesMethod = agent.speciesType.find(self.popParam.species.method)
         if speciesMethod is not None:
             species = speciesMethod.execute(self)
-            self.monitor.recordSpecies(species)
+            # self.monitor.recordSpecies(species)
 
         # 启动进化线程
         #self.thread = threading.Thread(target=self.loop, name='session'+self.taskxh)
@@ -108,7 +108,7 @@ class Session:
     #endregion
 
     #region 进化过程
-    def loop(self,arg):
+    def loop(self,arg=None):
         # 循环直到满足终止条件
         while 1:
             termited,reason = self.isTerminted()
@@ -162,7 +162,7 @@ class Session:
         取得操作序列
         :return:
         '''
-        return self.runParam.operations.text.spilt(',')
+        return self.runParam.operations.text.split(',')
 
     def __createPopRecord(self):
         r = {}

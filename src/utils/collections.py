@@ -75,7 +75,19 @@ def foreach(the_iterable,operation):
     for i in the_iterable:
         operation(i)
 
-
+def mapreduce(the_iterable,reducefunc,mapfunc=None,default=''):
+    '''
+    mapreduce操作
+    :param the_iterable: iterable 迭代对象
+    :param reducefunc:   func  reduce函数，如果为None，则返回结果由下一个参数决定
+    :param mapfunc:      func  map函数，如果为None，则返回结果只做reduce操作
+    :param default:      the_iterable无效的时候返回的值
+    :return:
+    '''
+    if isEmpty(the_iterable):return default
+    if mapfunc is None and reducefunc is None:return default
+    r1 = the_iterable if mapfunc is None else map(mapfunc,the_iterable)
+    return r1 if reducefunc is None else reduce(reducefunc,r1)
 #endregion
 
 #region 集合性质判定

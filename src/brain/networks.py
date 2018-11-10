@@ -77,6 +77,36 @@ class NeuralNetwork:
         return "net"+str(self.id) + \
                  "(" + reduce(lambda x,y:x+","+y,map(lambda n:str(n),ns))+")"+\
                  "[" + reduce(lambda x,y:x+","+y,map(lambda s:str(s),sps))+"]"
+
+    def merge(self,net,newnetid):
+        '''
+        合并两个网络，两个网络本身并不
+        :param net:
+        :param newnetid:
+        :return:
+        '''
+        if net is None:return
+        newnet = NeuralNetwork(newnetid,self.definition)
+
+        for ns in self.neurons:
+            for n in ns:
+                if newnet.getNeuron(n.id) is not None:continue
+                newnet.__putneuron(n)
+        for ns in net.neurons:
+            for n in ns:
+                if newnet.getNeuron(n.id) is not None: continue
+                newnet.__putneuron(n)
+
+        for synapse in self.synapses:
+            if newnet.getSynapse(id=synapse.id) is not None:continue
+            newnet._connectSynapse(synapse)
+
+        for synapse in net.synapses:
+            if newnet.getSynapse(id=synapse.id) is not None:continue
+            newnet._connectSynapse(synapse)
+
+        return newnet
+
     #endregion
 
     #region 神经元素数量
@@ -303,7 +333,7 @@ class NeuralNetwork:
 
 
     #region 修改神经元或者突触
-    def connect(self,synapse):
+    def _connectSynapse(self,synapse):
         '''
         添加突触
         :param synapse: 突触对象，如果缺少id，会为其添加一个，如果该连接已经存在，会覆盖原来的
@@ -346,7 +376,7 @@ class NeuralNetwork:
             if self.getNeuron(id=destid) is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+destid)
 
             synapse = Synapse(idGenerator.getSynapseId(self,srcid,destid),id,birth,srcid,destid,synapseModelConfig)
-            self.connect(synapse)
+            self._connectSynapse(synapse)
             return self
         if srcid is list:
             for sid in srcid:
@@ -356,7 +386,7 @@ class NeuralNetwork:
                 self.connect(srcid,did,birth,synapseModelConfig)
         return self
 
-    def put(self,neuron,inids=None,outinds=None,synapseModelConfig=None):
+    def __putneuron(self,neuron,inids=None,outinds=None,synapseModelConfig=None):
         '''
         添加神经元,会检查神经元id，是否重复（重复会删除旧的）
         :param neuron:   Neuron 待添加神经元
@@ -407,7 +437,7 @@ class NeuralNetwork:
 
         return self
 
-    def put(self, birth, coord, layer, neuronModelConfig, inids, outinds, synapseModelConfig):
+    def put(self, birth, coord, layer, neuronModelConfig, inids=None, outinds=None, synapseModelConfig=None):
         '''
         添加神经元
         :param birth:                int or float 添加时间，必须
@@ -426,7 +456,7 @@ class NeuralNetwork:
         if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")
 
         n = Neuron(idGenerator.getNeuronId(self,coord),layer,birth,neuronModelConfig,coord)
-        return self.put(n,inids,outinds,synapseModelConfig)
+        return self.__putneuron(n,inids,outinds,synapseModelConfig)
 
 
     def remove(self,ele):

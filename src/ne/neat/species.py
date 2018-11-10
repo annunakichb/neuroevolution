@@ -30,6 +30,8 @@ class NeatSpeciesMethod:
                 species_inds = [ind for i,ind in enumerate(inds) if i in np.argwhere(labels[0]==index)]
                 if collections.isEmpty(species_inds):continue
                 specieId = idgenerator.getSpeciesid(list(map(lambda ind:ind.getPhenome(),species_inds)))
+                for ind in species_inds:
+                    ind.speciedId = specieId
                 sp = Specie(id=specieId,inds = species_inds,pop = session.pop)
                 species.append(sp)
             session.pop.species = species

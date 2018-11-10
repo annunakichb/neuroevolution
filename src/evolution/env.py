@@ -1,5 +1,6 @@
 from functools import reduce
 from utils.strs import ExtendJsonEncoder
+import  utils.strs as strs
 
 __all__ = ['EvaluationValue','Evaluator']
 #个体评估值
@@ -80,6 +81,7 @@ class EvaluationValue:
         if len(self.values)>self.maxsize:
             self.values = self.values[1:]
         return self
+
 
 # 评估器
 class Evaluator:

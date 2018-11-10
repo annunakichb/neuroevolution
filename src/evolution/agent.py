@@ -132,7 +132,10 @@ class Population:
     def getInd(self,id):
         return collections.first(self.inds,lambda ind:ind.id == id)
 
-    def getSpecie(self):
+    def getSpecie(self,specieId):
+        return collections.first(self.species,lambda s:s.id == specieId)
+
+    def getSpecies(self):
         return self.species
 
     def evaulate(self,session):
@@ -191,19 +194,25 @@ class Population:
             else:
                 return self.features[item]
 
-        return super.__getitem__(item)
+        return super(Specie, self).__getitem__(item)
 
     def __setitem__(self, key, value):
+        '''
+        索引器
+        :param key:   str key
+        :param value: Union(EvaluationValue,dict) 值
+        :return: None
+        '''
         if key not in self.features.keys():
             self.features[key] = value
 
-        if value is float:
+        if isinstance(value,float):
             self.features[key] = EvaluationValue()
             self.features[key].append(value)
         else:
             self.features[key] = value
 
-    def getFeature(self,key,name):
+    def getEvaluationObject(self, key, name):
         if key not in self.features.keys():
             return None
 
@@ -233,6 +242,10 @@ class Specie:
         self.features = {}
         self.__doEvaulate()
 
+    def putIndId(self,indid):
+        if indid not in self.indids:
+            self.indids.append(indid)
+
     def __doEvaulate(self):
         '''
         计算物种的适应度等指标
@@ -251,13 +264,22 @@ class Specie:
 
     def __getitem__(self, item):
         if item in self.features.keys():
-            return self.features[item].value
+            if self.features[item] is EvaluationValue:
+                return self.features[item].value
+            else:
+                return self.features[item]
+
         return super(Specie,self).__getitem__(item)
 
     def __setitem__(self, key, value):
         if key not in self.features.keys():
+            self.features[key] = value
+
+        if value is float:
             self.features[key] = EvaluationValue()
-        self.features[key].append(value)
+            self.features[key].append(value)
+        else:
+            self.features[key] = value
 
     def __str__(self):
         return '('+collections.listtostr(self.indids) + "):[" + collections.dicttostr(self.features) + "]"

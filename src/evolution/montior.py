@@ -71,7 +71,8 @@ class Monitor:
         self.logger.info("")
 
     def recordDebug(self,module,debugName,debugInfo):
-        self.logger.debug('调试信息('+str(module)+"):"+str(debugName)+":"+str(debugInfo))
+        self.logger.debug('#调试信息('+str(module)+"):"+str(debugName)+":"+str(debugInfo))
+        self.logger.info("")
 
     def recordSessionBegin(self):
         self.__recordSection('Session开始',Session编号=str(self.evoTask.curSession.taskxh))
@@ -138,7 +139,7 @@ class Monitor:
         # 写迭代开始标记
         s1 = "##########################################################################################"
         s = '第'+str(int(self.evoTask.curSession.curTime))+'次迭代'
-        s2 = '#'*((len(s1)-len(s))/2) + s
+        s2 = '#'*int(((len(s1)-len(s))/2)) + s
         while len(s2) < len(s1):
             s2 += "#"
         s = [s1,s2,s1]
@@ -148,7 +149,7 @@ class Monitor:
         if self.callback is not None: self.callback('epoch.begin', self)
 
     def recordOperation(self,operation,result):
-        self.__recordSection('执行操作='+operation.name,result=str(result.msg))
+        self.__recordSection('执行操作='+operation.name,result=str(result[1]))
         self.operationResult[operation.name] = result
         if self.callback is not None: self.callback('operation.completed', self)
 

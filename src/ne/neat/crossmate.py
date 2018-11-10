@@ -27,15 +27,17 @@ class NeatCrossmateOperation:
         # 遍历并进行交叉操作
         newinds = []
         for indpair in corssmateinds:
-            net1 = indpair[0].getPhenome()
-            net2 = indpair[1].getPhenome()
-            net = net1.merge(net2)
-            idgenerator = networks.idGenerators.find(net.definition.idGenerator)
-            net.id = idgenerator.getNetworkId()
-            ind = Individual(net.id, 0, session.curTime, session.pop.param.indTypeName)
-            ind.speciedId = indpair[0].speciedId
+            net1 = session.pop[indpair[0]].getPhenome()
+            net2 = session.pop[indpair[1]].getPhenome()
+            idgenerator = networks.idGenerators.find(net1.definition.idGenerator)
+            netid = idgenerator.getNetworkId()
+            net = net1.merge(net2,netid)
+
+            ind = Individual(net.id, 0, session.curTime, session.pop.params.indTypeName)
+            ind.speciedId = session.pop[indpair[0]].speciedId
             session.pop.inds.append(ind)
-            session.monitor.recordDebug(NeatCrossmateOperation.name,'新增个体:'+str(ind))
+            session.pop.getSpecie(ind.speciedId).putIndId(ind.id)
+            session.monitor.recordDebug(NeatCrossmateOperation.name,'新增个体',str(ind))
 
         return  True,'',newinds
 
