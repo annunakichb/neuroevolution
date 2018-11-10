@@ -71,7 +71,12 @@ class NeuralNetwork:
         self.attributes = {}
         self.taskstat = {}
 
-
+    def __str__(self):
+        ns = self.getNeurons()
+        sps = self.getSynapses()
+        return "net"+str(self.id) + \
+                 "(" + reduce(lambda x,y:x+","+y,map(lambda n:str(n),ns))+")"+\
+                 "[" + reduce(lambda x,y:x+","+y,map(lambda s:str(s),sps))+"]"
     #endregion
 
     #region 神经元素数量
@@ -150,11 +155,13 @@ class NeuralNetwork:
         :return:
         '''
         if len(self.neurons) <= 0: return []
-        if layer < 0 and activation is None:
-            return reduce(lambda x,y:x.extend(y),self.neurons)
 
-        ns = reduce(lambda x,y:x.extend(y),self.neurons)
-        return collections.findall(ns,lambda n:(layer<0 or n.layer == layer) and (ns['activation']==activation))
+        r = []
+        collections.foreach(self.neurons, lambda ns: r.extend(ns))
+        if layer < 0 and activation is None:
+            return r
+
+        return collections.findall(r,lambda n:(layer<0 or n.layer == layer) and (r['activation']==activation))
 
 
 
@@ -223,9 +230,17 @@ class NeuralNetwork:
     #endregion
 
     #region 查询突触
-    def getSynapses(self):
+    def getSynapses(self,fromId = -1,toId=-1):
         '''所有突触'''
-        return self.synapses
+        if fromId == -1 and toId == -1:
+            return self.synapses
+        elif fromId == -1:
+            return self.getInputSynapse(toId)
+        elif toId == -1:
+            return self.getOutputSynapse(fromId)
+        else:
+            s = self.getSynapse(fromId=fromId,toId=toId)
+            return [] if s is None else [s]
 
     def getInputSynapse(self,neuronId):
         '''取得指定神经元的输入突触'''

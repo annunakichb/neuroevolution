@@ -32,7 +32,7 @@ class NameInfo:
         :return:
         '''
         if name is None:return False
-        if strs.vequals(name,self.name):return True
+        if strs.equals(name,self.name):return True
         if not allName:return False
         if strs.equals(name,self.caption):return True
         if self.alias is None or len(self.alias)<=0:return False
@@ -68,8 +68,7 @@ class NameInfo:
 
 
 class Range:
-    #? 正则定义有问题
-    regax = r'(\S*)'  + r'([|\(){1}' + r'([-]\d+\.\d+){1}' + ':' + r'([-]\d+\.\d+){1}' + r'(:[-]\d+\.\d+)?' + r'(]|\)){1}'
+    regax = '(\S*)'  + '(\[|\(){1}' + '((\+|-)?\d+(\.\d+)?){1}'+ '\:' + '((\+|-)?\d+(\.\d+)?){1}' + '(\:((\+|-)?\d+(\.\d+)?))?' + '(\]|\)){1}'
     pattern = re.compile(regax)
     def __init__(self,range):
         '''
@@ -85,12 +84,19 @@ class Range:
         self.__list = []
         self.__stepMode = 'step'
 
+        #m = re.compile('(\S*)').match('uniform')
+        #m = re.compile('(\[|\(){1}').match('[')
+        #m = re.compile('((\+|-)?\d+(\.\d+)?){1}').match('-30.0')
+        #m = re.compile('\:').match(':')
+        #m = re.compile('(\:(\+|-)?\d+(\.\d+)?)?').match(':-30.0')
+        #m = re.compile('(\]|\)){1}').match(']')
+
         if not strs.isVaild(range):return
-        m = Range.pattern.match(range)    #？未校验错误
-        self.distributionName = m.group(0)
-        self.begin = m.group(1)
-        self.end = m.group(2)
-        self.step = m.group(3)  #？有错误
+        m = Range.pattern.match(range)
+        self.distributionName = m.groups()[0]
+        self.begin = float(m.groups()[2])
+        self.end = float(m.groups()[5])
+        self.step = (self.end - self.begin)/10 if m.groups()[9] is None else float(m.groups()[9])  #？有错误
 
     def sample(self,size=1):
         if self.distributionName == 'uniform':
@@ -147,6 +153,7 @@ class Variable(PropertyInfo):
         return format(self.value)
 
     def __repr__(self):
+        if self.value is None:return ''
         return self.nameInfo.name + '=' + format(self.value)
 
 # 注册表对象
@@ -201,6 +208,13 @@ class Properties(dict):
 
     def __setattr__(self, key, value):
         self[key] = value
+
+    def __getitem__(self, item):
+        value = super(Properties,self).__getitem__(item)
+        if isinstance(value,dict) and not isinstance(value,Properties):
+            return Properties(value)
+        return value
+
 
 
 

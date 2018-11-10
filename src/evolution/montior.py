@@ -66,10 +66,12 @@ class Monitor:
 
         keys = [] if collections.isEmpty(kwdatas) else kwdatas.keys()
         for key in keys:
-            self.logger.info(key + ':' + kwdatas[key])
+            self.logger.info(key + ':' + str(kwdatas[key]))
+
+        self.logger.info("")
 
     def recordDebug(self,module,debugName,debugInfo):
-        self.logger.debug('调试信息('+module+"):"+debugName+":"+debugInfo)
+        self.logger.debug('调试信息('+str(module)+"):"+str(debugName)+":"+str(debugInfo))
 
     def recordSessionBegin(self):
         self.__recordSection('Session开始',Session编号=str(self.evoTask.curSession.taskxh))
@@ -90,9 +92,9 @@ class Monitor:
         kwdatas = {}
         keys = self.evoTask.curSession.pop.features.keys()
         for key in keys:
-            kwdatas[key] = 'max='+ self.evoTask.curSession.pop[key]['max'] +\
-                           ",avg="+self.evoTask.curSession.pop[key]['average']+\
-                           ',min='+self.evoTask.curSession.pop[key]['min']
+            kwdatas[key] = 'max='+ str(self.evoTask.curSession.pop[key]['max']) +\
+                           ",avg="+ str(self.evoTask.curSession.pop[key]['average'])+\
+                           ',min='+ str(self.evoTask.curSession.pop[key]['min'])
 
         self.__recordSection('种群特征',**kwdatas)
         if self.callback is not None: self.callback('feature.record', self)
@@ -102,7 +104,7 @@ class Monitor:
         if collections.isEmpty(logInds):return
         kwdatas = {}
         for ind in logInds:
-            kwdatas['ind'+ind.id] = str(ind.genome)
+            kwdatas['ind'+str(ind.id)] = str(ind)
         self.__recordSection('重要个体',**kwdatas)
         if self.callback is not None: self.callback('inds.record', self)
 
@@ -120,7 +122,17 @@ class Monitor:
 
 
     def recordSpecies(self,species):
-        return #raise RuntimeError('没有实现')
+        kwdatas = {'物种数量':0}
+        if collections.isEmpty(species):
+            self.__recordSection('物种特征', **kwdatas)
+            return
+
+        kwdatas['物种数量'] = len(species)
+        for specie in species:
+            kwdatas['specie'+str(specie.id)]  = str(specie)
+
+        self.__recordSection('种群特征', **kwdatas)
+        if self.callback is not None: self.callback('species.record', self)
 
     def recordEpochBegin(self):
         # 写迭代开始标记

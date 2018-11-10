@@ -1,4 +1,4 @@
-
+import numpy as np
 from enum import Enum
 from utils import collections
 from utils.properties import Registry
@@ -33,20 +33,26 @@ class NeuralNetworkTask:
 
     #region 初始化
 
-    def __init__(self,train_x=[],train_y=[],test_x=[],test_y=[]):
+    def __init__(self,train_x=[],train_y=[],test_x=[],test_y=[],**kwargs):
         '''
         神经网训练任务
         :param train_x:   训练样本
         :param train_y:   训练标签
         :param test_x:    测试样本
         :param test_y:    测试标签
+        :param kwargs     配置参数:
+                           'deviation' : 0.00001 float or list of float 度量准确性的允许误差
+                           'multilabel': False   bool                   是否是多标签
         '''
         self.train_x = train_x
         self.train_y = train_y
         self.test_x = test_x
         self.test_y = test_y
-        self.test_result = []*len(test_y)
+        self.test_result = [[]]*len(test_y)
         self.test_stat = {}
+        self.kwargs = {} if kwargs is None else kwargs
+        if 'deviation' not in self.kwargs.keys():self.kwargs['deviation'] = 0.00001
+        if 'multilabel' not in self.kwargs.keys():self.kwargs['multilabel'] = False
 
     # 记录测试结果
     def setTestResult(self,i,test_result,doStat=False):
@@ -72,13 +78,25 @@ class NeuralNetworkTask:
         for index,result in enumerate(self.test_result):
             if collections.equals(self.test_result[index],self.test_y[index]):
                 correctcount += 1
+            else:
+                diff = abs(self.test_result[index]-self.test_y[index])
+                if not self.kwargs['multilabel'] and diff <= self.kwargs['deviation']:
+                    correctcount += 1
+                elif self.kwargs['multilabel']:
+                    if isinstance(self.kwargs['deviation'],float):
+                        if np.average(diff) <= self.kwargs['deviation']:
+                            correctcount += 1
+                    elif isinstance(self.kwargs['deviation'],list):
+                        if collections.all(diff - self.kwargs['deviation'],lambda t : t <0):
+                            correctcount += 1
+
             mae += abs(self.test_result[index]-self.test_y[index])
             mse += pow(self.test_result[index]-self.test_y[index],2)
             testcount += 1
 
         self.test_stat[NeuralNetworkTask.INDICATOR_TEST_COUNT] = testcount
         self.test_stat[NeuralNetworkTask.INDICATOR_CORRECT_COUNT] = correctcount
-        self.test_stat[NeuralNetworkTask.INDICATOR_ACCURACY] = testcount/correctcount
+        self.test_stat[NeuralNetworkTask.INDICATOR_ACCURACY] = correctcount/testcount
         self.test_stat[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR] = mae / testcount
         self.test_stat[NeuralNetworkTask.INDICATOR_MEAN_SQUARED_ERROR] = mse / testcount
 
@@ -87,7 +105,7 @@ class NeuralNetworkTask:
 
     def __getitem__(self, item):
         if item in self.test_stat.keys():return self.test_stat[item]
-        return super.__getitem__(item)
+        return super(NeuralNetworkTask,self).__getitem__(item)
     #endregion
 
 
@@ -129,36 +147,38 @@ class SimpleNeuralNetworkRunner:
                 model = models.nervousModels.find(inputNeurons[d].modelConfiguration.modelid)
                 model.execute(inputNeurons[d],net,value=v)
 
-                s = net.getOutputNeurons(inputNeurons[d].id)
+                s = net.getOutputSynapse(inputNeurons[d].id)
                 if collections.isEmpty(s):continue
 
-                model = models.nervousModels.find(s.modelConfiguration.modelid)
-                model.execute(s,net)
+                collections.foreach(s,lambda x:x.getModel().execute(x,net))
 
             # 反复执行
             ns = net.getNeurons()
             neuronCount = net.getNeuronCount()
             iterCount = 0
             outputNeurons = net.getOutputNeurons()
-            while not collections.all(outputNeurons,lambda n:'value' in outputNeurons.states.keys()) and iterCount<=neuronCount:
+            while not collections.all(outputNeurons,lambda n:'value' in n.states.keys()) and iterCount<=neuronCount:
                 iterCount += 1
-                uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.state.keys())
+                uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.states.keys())
                 if collections.isEmpty(uncomputeNeurons):break
                 for n in uncomputeNeurons:
                     model = n.getModel()
-                    synapses = net.getSynapses(toId = n.id)
+                    synapses = net.getInputSynapse(n.id)
                     if collections.isEmpty(synapses):continue
-                    if not collections.all(synapses,lambda s:'value' in s.state.keys):continue
+                    if not collections.all(synapses,lambda s:'value' in s.states.keys()):continue
                     model.execute(n,net)
 
-                    synapses = net.getSynapses(fromId = n.id)
+                    synapses = net.getOutputSynapse(n.id)
                     if collections.isEmpty(synapses):continue
                     collections.foreach(synapses,lambda s:s.getModel().execute(s,net))
 
             # 将没结果的输出神经元的值设置为0
-            collections.foreach(outputNeurons,lambda n:exec("n['value']=0"))
+            outputNeuronsWithNoResult = collections.findall(outputNeurons,lambda n:'value' not in n.states.keys())
+            if not collections.isEmpty(outputNeuronsWithNoResult):
+                collections.foreach(outputNeuronsWithNoResult,lambda n:exec("n['value']=0"))
             # 取得结果
             outputs = list(map(lambda n:n['value'],outputNeurons))
+            if len(outputs) == 1:outputs = outputs[0]
             task.setTestResult(index,outputs)
 
         task.__doTestStat__()

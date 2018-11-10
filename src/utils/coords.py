@@ -1,8 +1,12 @@
-
+import utils.collections as collections
+from functools import reduce
 
 class Coordination:
     def __init__(self,*values):
-        self.values = [].extend(values)
+        if values is None:
+            self.values = []
+        else:
+            self.values = list(values)
 
     @property
     def X(self):
@@ -32,6 +36,16 @@ class Coordination:
         return 0 if len(self.values) <= index else self.values[index]
 
     def __setValue(self, index, value):
+        if self.values is None: self.values = []
         if len(self.values)>(index+1):
             self.values[index] = value
         else:self.values.extend([0.0]*(index-len(self.values))).append(value)
+
+    def __eq__(self, other):
+        if isinstance(other,Coordination):return False
+        return collections.equals(self.values,other.values)
+
+    def __str__(self):
+        if self.values is None:self.values = []
+        if len(self.values)<=0:return ''
+        return  reduce(lambda x,y:x+","+y,map(lambda v: "{:d}".format(v) if v == int(v) else "{:.2f}".format(v),self.values))

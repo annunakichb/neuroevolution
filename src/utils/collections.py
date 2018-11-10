@@ -1,7 +1,8 @@
 import json
 from functools import reduce
 import  copy
-from .strs import *
+from utils.strs import *
+import utils.strs as strs
 
 import  numpy as np
 
@@ -95,6 +96,8 @@ def equals(list1,list2,lenmatch=True):
     :param lenmatch:  是否要求长度必须匹配
     :return:
     '''
+    if not isinstance(list1,list) and not isinstance(list2,list):return list1 == list2
+    if not isinstance(list,list) or not  isinstance(list2,list):return False
     if isEmpty(list1) and isEmpty(list2): return True
     elif isEmpty(list1) or isEmpty(list2):return False
 
@@ -149,19 +152,19 @@ def listtostr(list,**props):
         :return:
         '''
     if isEmpty(list):return ''
-    format = 'csv' if props is None or not props.keys().__contains__('format') else props['csv']
+    format = 'csv' if props is None or 'format' not in props.keys() else props['format']
     if format == 'json':
         return json.dumps(list)
 
     sep = ',' if props is None or not props.keys().__contains__('sep') else props['sep']
-    strs = ''
+    ss = ''
     for value in list:
-        if len(strs)>0:strs += sep    #添加分隔符
+        if len(ss)>0:ss += sep    #添加分隔符
         if format == 'csv':
-            str += format(value)
+            ss += strs.format(value)
         else:
-            strs += format.append(format.replace('{$P}', getName(value)).replace('{$V}', format(value)))
-    return strs
+            ss += format.replace('{$P}', getName(value)).replace('{$V}', strs.format(value))
+    return ss
 
 #字段转字符串
 def dicttostr(dict,**props):
@@ -175,14 +178,14 @@ def dicttostr(dict,**props):
     '''
     if isEmpty(dict):return ''
 
-    format = '{$P}={$V}' if props is None or not props.keys().__contains__('format') else props['format']
+    format = '{$P}={$V}' if props is None or 'format' not in props.keys() else props['format']
     if format == 'json':
         return json.dumps(dict)
-    sep = ',' if props is None or not props.keys().__contains__('sep') else props['sep']
-    strs = []
+    sep = ',' if props is None or 'sep' not in props.keys() else props['sep']
+    s = []
     for key, value in dict.items():
-        strs.append(format.replace('{$P}',str(key)).replace('{$V}',str(value)))
-    return listtostr(strs,format='csv',sep=sep)
+        s.append(format.replace('{$P}',str(key)).replace('{$V}',strs.format(value)))
+    return listtostr(s,format='csv',sep=sep)
 
 #endregion
 

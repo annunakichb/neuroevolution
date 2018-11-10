@@ -4,6 +4,7 @@ from evolution.env import EvaluationValue
 
 from utils.properties import Registry
 import utils.collections as collections
+import utils.strs as strs
 
 import  numpy as np
 
@@ -89,7 +90,15 @@ class Individual:
     def getFeature(self,name):
         return self.features.get(name)
 
+    def __str__(self):
+        return self._getFeatureStr() + ":" + str(self.genome) + ""
 
+    def _getFeatureStr(self):
+        r = collections.dicttostr(self.features)
+        return '(' + r + ')' if strs.isVaild(r) else ''
+        #if collections.isEmpty(self.features.keys()): return ''
+        #elif len(self.features.keys()) == 1: return self.features.keys()
+        #return map(lambda k: self.features[k], self.features.keys())
 #endregion
 
 #region 种群信息
@@ -159,8 +168,9 @@ class Population:
         self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
 
         # 记录精英个体id
-        eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else session.popParam.elitistSize * session.popParam.size
+        eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else int(session.popParam.elitistSize * session.popParam.size)
         self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
+
 
     def __doIndEvaulate(self,ind,key,evoluator,session):
         value = evoluator.calacute(ind, session)
@@ -206,7 +216,7 @@ class Population:
 
 # 物种
 class Specie:
-    __slots__ = ['id','inds','pop','features']
+    __slots__ = ['id','indids','pop','features','targetSize']
     def __init__(self,id,inds,pop):
         '''
         物种
@@ -217,8 +227,9 @@ class Specie:
         self.id = id
         self.pop = pop
         self.targetSize = 0
+        self.indids = []
         if not collections.isEmpty(inds):
-            self.indids = list(map(lambda ind:ind.id if ind is Individual else ind,inds))
+            self.indids = list(map(lambda ind:ind.id if isinstance(ind,Individual) else ind,inds))
         self.features = {}
         self.__doEvaulate()
 
@@ -228,14 +239,28 @@ class Specie:
         :return:
         '''
         for key, evoluator in self.pop.params.features.items():
-            fitnesses = list(map(lambda indid:self.pop[indid]['fitness'],self.inds))
-            max, avg, min = collections.rangefeature(fitnesses)
+            max, avg, min, stdev = collections.rangefeature(list(map(lambda id:self.pop.getInd(id)[key], self.indids)))
+            self[key] = {}
             self[key]['max'] = max
             self[key]['average'] = avg
             self[key]['min'] = min
+            self[key]['stdev'] = stdev
 
+        # 按照适应度值排序
+        self.indids.sort(key=lambda id: self.pop.getInd(id)['fitness'], reverse=True)
 
+    def __getitem__(self, item):
+        if item in self.features.keys():
+            return self.features[item].value
+        return super(Specie,self).__getitem__(item)
 
+    def __setitem__(self, key, value):
+        if key not in self.features.keys():
+            self.features[key] = EvaluationValue()
+        self.features[key].append(value)
+
+    def __str__(self):
+        return '('+collections.listtostr(self.indids) + "):[" + collections.dicttostr(self.features) + "]"
 
 
 #endregion

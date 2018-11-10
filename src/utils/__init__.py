@@ -1,3 +1,3 @@
 
 
-__all__ = ['collections','coords','files','properties','strs']
+__all__ = ['collections','coords','files','properties','strs','cluster']

@@ -2,7 +2,10 @@ from utils import strs as strs
 from utils import collections as collections
 from utils.properties import *
 from brain.activation import ActivationFunction
+import brain.activation as activation
 from utils.properties import Registry
+
+import  numpy as np
 
 
 __all__ = ['CommonInputNeurnModel','CommonHiddenNeuronModel','CommonSynapseModel','nervousModels']
@@ -67,7 +70,7 @@ class CommonHiddenNeuronModel:
         '''
 
         # 取得待计算突触的输入突触
-        synapses = net.getInputs(neuron.id)
+        synapses = net.getSynapses(toId=neuron.id)
         if synapses is None or len(synapses)<=0:return
 
         # 检查突触是否都有值
@@ -76,13 +79,13 @@ class CommonHiddenNeuronModel:
 
         # 取得突触所有输入值并求和(权重已经计算)
         inputs = list(map(lambda s:s.states['value'],synapses))
-        sum = sum(inputs)
+        sum = np.sum(inputs)
 
         # 加偏置
         sum += neuron['bias']
 
         # 取得激活函数
-        activationFunctionConfig = self.configuration.get('activationFunction')
+        activationFunctionConfig = neuron.modelConfiguration['activationFunction']
         activationFunction = ActivationFunction.find(activationFunctionConfig.name)
         if activationFunction is None:raise RuntimeError('神经元计算失败(CommonNeuronModel),激活函数无效:'+activationFunctionConfig.name)
 
@@ -90,9 +93,8 @@ class CommonHiddenNeuronModel:
         activationParamNames = activationFunction.getParamNames()
         activationParams = {}
         for name in activationParamNames:
-            if name in activationFunctionConfig:activationParams[name] = activationFunctionConfig[name]
-            v = neuron[name]
-            if v is not None:activationParams[name] = v
+            if name in map(lambda v: v.nameInfo.name, neuron.variables): activationParams[name] = neuron[name]
+            elif name in activationFunctionConfig:activationParams[name] = activationFunctionConfig[name]
 
         # 用输入和计算激活函数
         value,activation = activationFunction.calculate(sum,activationParams) #?这里有问题，激活函数的参数无法传入
@@ -131,7 +133,7 @@ class CommonSynapseModel:
         if 'value' not in neuron.states.keys():return None
         w = synapse['weight']
         value = w * neuron['value']
-        synapse['vlaue'] = value
+        synapse['value'] = value
         return value
 
 #endregion

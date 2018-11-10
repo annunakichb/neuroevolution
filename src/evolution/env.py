@@ -51,6 +51,24 @@ class EvaluationValue:
         '''
         return self.getValue()
 
+    def __str__(self):
+        return str(self.getValue())
+
+    @property
+    def value(self):
+        return self.getValue()
+
+    @value.setter
+    def value(self,v):
+        self.append(v)
+
+    @property
+    def Value(self):
+        return self.getValue()
+
+    @Value.setter
+    def Value(self, v):
+        self.append(v)
 
     def append(self,value):
         '''
@@ -61,6 +79,7 @@ class EvaluationValue:
         self.values.append(value)
         if len(self.values)>self.maxsize:
             self.values = self.values[1:]
+        return self
 
 # 评估器
 class Evaluator:

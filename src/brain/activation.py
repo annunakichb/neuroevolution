@@ -12,11 +12,12 @@ __all__ = ['ActivationFunction','Gaussian','Sigmod','activations']
 
 # 抽象激活函数
 class ActivationFunction:
+
     def __init__(self,name):
         '''
         激活函数
         '''
-        self.nameInfo = name if name is NameInfo else NameInfo(str(name))
+        self.nameInfo = name if isinstance(name,NameInfo) else NameInfo(str(name))
         self.vars = {}  #激活函数的参量
 
     @classmethod
@@ -34,33 +35,8 @@ class ActivationFunction:
         return activationObj.calculate(inputs,modelparams)
 
     @classmethod
-    def find(cls,name,cataory=''):
-        '''
-        寻找指定名称或者类型的激活函数
-        :param name:         激活函数名称
-        :param cataory:      激活函数类型，如果通过name找不到，则尝试寻找指定类型的所有
-        :return:
-        '''
-        if name is not None:
-            key = first(activations.keys(),lambda key: key.hasName(name))
-            if key is not None:return activations[key]
-
-        if cataory is not None and cataory != '':
-            findall(activations.values(),lambda func:func.nameInfo.cataory == cataory)
-
-    @classmethod
-    def register(cls,func):
-        '''
-        注册或者修改激活函数
-        :param func:  激活函数
-        :return:
-        '''
-        if func is None:return
-        activations[func.nameInfo] = func
-
-    @classmethod
-    def findAll(cls):
-        return activations;
+    def find(cls,name):
+        return activations.find(name)
 
 #endregion
 
@@ -101,6 +77,7 @@ class Gaussian(ActivationFunction):
         sigma = params.get('sigma',self.sigma)
         value = math.exp(-math.pow(inputs-center,2)/math.pow(sigma,2))
         return value,random() < value
+
 
 
 

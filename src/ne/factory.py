@@ -1,4 +1,5 @@
 import geopy
+import  logging
 import numpy as np
 from utils.coords import Coordination
 import utils.collections as collections
@@ -72,6 +73,8 @@ class DefaultNeuralNetworkGenomeFactory:
                         synapse = Synapse(synapseid, 0, n1.id, n2.id, netdef.models.synapse)
                         net.synapses.append(synapse)
 
+
+            logging.debug('# neat工厂创建网络:'+str(net))
 
         return genomes
 

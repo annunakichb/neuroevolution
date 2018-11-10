@@ -7,7 +7,6 @@ from utils import collections
 __all__ = ['FORMAT','isVaild','vaild','equals','getName','format','ExtendJsonEncoder']
 
 
-
 #region 性质判定
 
 #是否有效字符串
@@ -102,19 +101,21 @@ def format(obj,**fmts):
     if obj is None:
         if raiseWhenNone: raise RuntimeError('无法格式化对象:对象为None')
         else: return ''
-    elif obj is str: return str(obj)
-    elif obj is int:
+    elif isinstance(obj,str): return str(obj)
+    elif isinstance(obj,int):
         radix = 10 if fmts is None else fmts.get('radix',10)
         if radix == 2 or radix == 'b' or radix == 'bin' or radix == 'binary':return "{0:b}".format(obj)
         elif radix == 8 or radix == 'o' or radix == 'oct' : return "{0:o}".format(obj)
         elif radix == 16 or radix == 'h' or radix == 'hex' : return "{0:h}".format(obj)
         else: return str(obj)
-    elif obj is float:
+    elif isinstance(obj,float):
         if float(obj) == int(obj): return str(int(obj))
         else:
             fmt = '.2f' if fmts is None else fmts.get('float','.2f')
-            return '{0:'+fmt+'}'.format(obj)
-    else:raise RuntimeError('功能没有实现')
+            return ('{0:'+fmt+'}').format(obj)
+    else:
+        return str(obj)
+        #raise RuntimeError('功能没有实现')
 
 #endregion
 

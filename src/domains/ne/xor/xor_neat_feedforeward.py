@@ -65,7 +65,7 @@ def run():
             'synapse':{
                 'name':'synapse',                                 # str 突触计算模型配置名称,可选
                 'modelid':'synapse',                              # str 突触计算模型Id，必须
-                'weight':'uniform[-30.0,30.0]'                    # str 突触学习变量，均匀分布，必须
+                'weight':'uniform[-30.0:30.0]'                    # str 突触学习变量，均匀分布，必须
             }
         }
     }
@@ -80,10 +80,12 @@ def run():
         },
         'genomeDefinition' : netdef,                              #基因定义参数,可选
         'size':100,                                               #种群大小，必须
-        'elitistSize':0.2,                                        #精英个体占比，小于1表示比例，大于等于1表示数量
+        'elitistSize':0.05,                                       #精英个体占比，小于1表示比例，大于等于1表示数量
         'species':{                                               #物种参数，可选
-            'method':'',                                          #物种分类方法
-            'size':0                                              #物种个体数量限制，0表示无限制或动态
+            'method':'neat_species',                              # 物种分类方法,在物种参数中必须
+            'alg':'kmean',                                        # 算法名称
+            'size': 5,                                            # 物种个体数量限制，0表示无限制或动态
+            'iter':50,                                            # 算法迭代次数
         },
         'features':{                                              # 特征评估函数配置，必须
             'fitness' : Evaluator('fitness',[(fitness,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
@@ -98,7 +100,7 @@ def run():
             'maxFitness' : 100,                                   # 最大适应度，必须
         },
         'log':{
-            'individual' : 'all',                                 # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
+            'individual' : 'elite',                               # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
         },
         'evalate':{
             'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选

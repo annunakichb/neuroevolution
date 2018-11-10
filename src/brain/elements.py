@@ -3,6 +3,7 @@
 import copy
 from utils import strs as strs
 from utils import collections as collections
+from utils.properties import Range
 import  brain.models as models
 
 __all__ = ['NueralElement','Neuron','Synapse']
@@ -34,16 +35,21 @@ class NueralElement:
         if self.modelConfiguration is None: raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置无效')
         if not strs.isVaild(self.modelConfiguration.modelid): raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置中modelId无效')
         model = models.nervousModels.find(self.modelConfiguration.modelid)
-        if model is None:raise RuntimeError('初始化计算模型失败(NueralElement.initModel):找不到模型:'+self.modelConfiguration.modelId)
+        if model is None:raise RuntimeError('初始化计算模型失败(NueralElement.initModel):找不到模型:'+self.modelConfiguration.modelid)
         self.states = {} if model.initStates is None else model.initStates
         self.variables = copy.deepcopy(model.variables)
 
+        if not collections.isEmpty(self.variables):
+            for var in self.variables:
+                if var.nameInfo.name in self.modelConfiguration:
+                    var.range = Range(self.modelConfiguration[var.nameInfo.name])
+                    var.value = 0 if var.range is None else var.range.sample()
     def getModel(self):
         '''
         取得计算模型
         :return:
         '''
-        return models.nervousModels.find(self.modelConfiguration.modelId)
+        return models.nervousModels.find(self.modelConfiguration.modelid)
 
     def reset(self):
         '''
@@ -51,6 +57,18 @@ class NueralElement:
         :return:
         '''
         self.states = {}
+
+    def getVariableValue(self,name,default=0.0):
+        '''
+        取得变量的值
+        :param name:    str   变量名
+        :param default: float 缺省值 0.0
+        :return:
+        '''
+        var = collections.first(self.variables, lambda var: var.nameInfo.hasName(name))
+        if var is None: return default
+        return var.value
+
 
     # 取得变量或者状态的值
     def __getitem__(self, item):
@@ -73,17 +91,14 @@ class NueralElement:
     def __setitem__(self, key, value):
 
         # 在变量集合中查找
-        var = collections.first(self.variables, lambda var: var.nameInfo.hasName(item))
+        var = collections.first(self.variables, lambda var: var.nameInfo.hasName(key))
         if var is not None:
             var.value = value
             return
 
         # 在状态集合中查找
-        if key in self.states.keys():
-            self.states[key] = value
-            return
-
-        super.__setitem__(key,value)
+        self.states[key] = value
+        #super(NueralElement,self).__setitem__(key,value)
 
 #神经元
 class Neuron(NueralElement):
@@ -101,11 +116,12 @@ class Neuron(NueralElement):
         self.layer = layer
 
     def __str__(self):
-        stateStr = collections.dicttostr(self.states)
-        varStr = collections.listtostr(list(map(lambda v:v.__repr(),self.variables)))
-        return 'Neuron'+str(id)+'[layer='+str(self.layer)\
-                               +(','+stateStr if strs.isVaild(stateStr) else '') \
-                               + (','+varStr if strs.isVaild(varStr) else '') + ']'
+        #stateStr = collections.dicttostr(self.states)
+        varStr = collections.listtostr(list(map(lambda v:v.__repr__(),self.variables)))
+        return 'Neuron'+str(self.id)+'[layer='+str(self.layer) \
+               + (',' + varStr if strs.isVaild(varStr) else '') + ']'
+                              # +(','+stateStr if strs.isVaild(stateStr) else '') \
+
 
     def __repr__(self):
         return str(self)
@@ -129,12 +145,15 @@ class Synapse(NueralElement):
         self.toId = toId
 
     def __str__(self):
-        return 'Synapse'+self.id+'['+self.fromId+'->'+self.toId+']'
+        varStr = collections.listtostr(list(map(lambda v: v.__repr__(), self.variables)))
+        varStr = '[' + varStr + "]" if strs.isVaild(varStr) else ''
+        return 'Synapse'+str(self.id)+'('+str(self.fromId)+'->'+str(self.toId)+')' + varStr
 
     def __repr__(self):
-        stateStr = collections.dicttostr(self.states)
-        varStr = collections.listtostr(list(map(lambda v: v.__repr(), self.variables)))
-        return 'Synapse' + self.id + '[' + self.fromId + '->' + self.toId \
-               + (',' + stateStr if strs.isVaild(stateStr) else '') \
+        #stateStr = collections.dicttostr(self.states)
+        varStr = collections.listtostr(list(map(lambda v: v.__repr__(), self.variables)))
+        return 'Synapse' + str(self.id) + '[' + str(self.fromId) + '->' + str(self.toId) \
                + (',' + varStr if strs.isVaild(varStr) else '') + ']'
+               #+ (',' + stateStr if strs.isVaild(stateStr) else '') \
+
 
