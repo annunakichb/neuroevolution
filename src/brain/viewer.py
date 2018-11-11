@@ -1,9 +1,14 @@
 
-import pygraphviz
+import graphviz
 
 class NetworkView:
     def __init__(self):
         self.styles = self.getDefaultNodeConfig()
+        self.node_attrs = {
+        'shape': 'circle',
+        'fontsize': '9',
+        'height': '0.2',
+        'width': '0.2'}
 
     def getDefaultNodeConfig(self):
         inputNodeConfig = {
@@ -29,19 +34,19 @@ class NetworkView:
 
 
     def drawNet(self,net,fmt='svg',filename=None,view=True):
-        dot = pygraphviz.Digraph(format=fmt, node_attr=self.node_attrs)
+        dot = graphviz.Digraph(format=fmt, node_attr=self.node_attrs)
         #画输入节点
         ns = net.neurons[0]
         for i,input in enumerate(ns):
             #text =str(i+1)
             text = str(input.id)
-            dot.node(text,self.styles['input'])
+            dot.node(text,_attributes=self.styles['input'])
         # 画输出节点
         ns = net.neurons[-1]
         for i,output in enumerate(ns):
             #text= str(i+1)
             text = str(output.id)
-            dot.node(text, self.styles['output'])
+            dot.node(text, _attributes=self.styles['output'])
 
         # 画所有中间节点
         ns = net.getHiddenNeurons()
@@ -52,7 +57,7 @@ class NetworkView:
             elif style['text'] == 'birth':text = str(int(hidden.birth))
             elif style['text'] == 'bias':text = "%。2f"%hidden['bias']
             text = str(hidden.id)
-            dot.node(text,style)
+            dot.node(text,_attributes=style)
 
         # 画连接
         synapses = net.getSynapses()
@@ -64,7 +69,7 @@ class NetworkView:
             connectionConfig['color'] = color
             connectionConfig['width'] = width
 
-            dot.edge(s.fromId, s.toId, _attributes=connectionConfig)
+            dot.edge(str(s.fromId), str(s.toId), _attributes=connectionConfig)
 
 
         dot.render(filename, view=view)

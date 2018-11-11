@@ -1,4 +1,6 @@
 from random import choice, random, shuffle
+from functools import reduce
+import  numpy as np
 from .selection import NeatSelection
 import brain.networks as networks
 from brain.elements import Neuron
@@ -22,72 +24,91 @@ class NeatMutate:
             return False, 'Neat变异操作无法执行，选择操作结果无效', None
         if not select_result[0]:
             return False, 'Neat变异操作无法执行，选择操作结果失败', None
-            mutateinds = select_result[2][1]
+        mutateinds = select_result[2][1]
         if mutateinds is None:
             return False, 'Neat变异操作无法执行，选择结果中变异个体集合无效', None
 
         if len(mutateinds) <= 0:
             return True, '没有需要变异操作的个体', None
 
-        # 生成变异各种操作概率
-        topoopertions = ['addnode','addconnection','deletenode','deleteconnection']
-        topoopertionrates = [session.runParam.mutate.topo.addnode,session.runParam.mutate.topo.addconnection,
-                             session.runParam.mutate.topo.deletenode,session.runParam.mutate.topo.deleteconnection]
+
         # 对候选个体进行变异
+        mutateStat = {}
         for mutateid in mutateinds:
-            if session.runParam.mutate.model.rate >= 0:
+            if session.runParam.mutate.model.rate > 0:
                 raise RuntimeError('对个体计算模型的变异还没有实现')
-            if session.runParam.mutate.activation.rate >= 0:
+            if session.runParam.mutate.activation.rate > 0:
                 raise RuntimeError('对个体激活函数的变异还没有实现')
 
-            np.random.seed(0)
-            p = np.array(topoopertionrates)
-            index = np.random.choice(topoopertions, p=p.ravel())
-            mutateoperation = topoopertions[index]
-            self.__dometate(session.pop[mutateid],mutateoperation,session)
+
+            succ,msg,oper,obj = self.__dometate(session.pop[mutateid],session)
+            if succ:
+                if oper not in mutateStat.keys():mutateStat[oper] = 0
+                mutateStat[oper] = mutateStat[oper] + 1
 
         # 对每个个体的权重进行随机变化
         for ind in session.pop.inds:
             self.__doWeightTrain(ind,session)
 
-        return True,'',None
+        resultMsg = reduce(lambda x,y:x+","+y,map(lambda key:key + "数量=" + str(mutateStat[key]),mutateStat)) if len(mutateStat)>0 else '无有效变异'
+        return True,resultMsg,None
 
-    def __dometate(self,ind,operation,session):
-        if operation == 'addnode': return self.__do_mutate_addnode(ind,session)
-        elif operation == 'addconnection':return self.__do_mutate_addconnection(ind,session)
-        elif operation == 'deletenode':return self.__do_mutate_deletenode(ind,session)
-        elif operation == 'deleteconnection':return self.__do_mutate_deleteconnection(ind,session)
-        return False,'无法识别的变异操作',None
+    def __dometate(self,ind,session):
+        # 生成变异各种操作概率
+        topoopertions = ['addnode', 'addconnection', 'deletenode', 'deleteconnection']
+        topoopertionrates = [session.runParam.mutate.topo.addnode, session.runParam.mutate.topo.addconnection,
+                             session.runParam.mutate.topo.deletenode, session.runParam.mutate.topo.deleteconnection]
+        operationfuncs = [self.__do_mutate_addnode,self.__do_mutate_addconnection,self.__do_mutate_deletenode,self.__do_mutate_deleteconnection]
+
+        np.random.seed(0)
+        retryCount = 0
+        while 1:
+            p = np.array(topoopertionrates)
+            mutateoperation = np.random.choice(np.array(topoopertions), p=p.ravel())
+            index = topoopertions.index(mutateoperation)
+            if index <0:return False,'无法识别的变异操作',None
+
+            r = operationfuncs[index](ind,session)
+            if r[0]:
+                session.monitor.recordDebug(NeatMutate.name, 'ind' + str(ind.id) + '变异操作=' + mutateoperation,r[1] + '' if r[3] is None else r[1]+str(r[3]))
+                return r
+            else:
+                v = topoopertionrates[index]  / (len(topoopertionrates)-1)
+                for i,rate in enumerate(topoopertionrates):
+                    topoopertionrates[i] = 0.0 if i == index else topoopertionrates[i] + v
+                retryCount += 1
+            if retryCount >= len(topoopertions):
+                return False,'ind' + str(ind.id) + '所有变异操作都失败','',None
 
     def __do_mutate_addnode(self,ind,session):
         net = ind.getPhenome()
-        synapses = net.getSynapse()
+        synapses = net.getSynapses()
         synapse = None
         if len(synapses)<=0:
             r,msg,synapse = self.____do_mutate_addconnection(ind)
         else:
             synapse = choice(synapses)
 
-        fromneuron = net.getNeuron(session.fromId)
-        toneuron = net.getNeuron(session.toId)
+        fromneuron = net.getNeuron(synapse.fromId)
+        toneuron = net.getNeuron(synapse.toId)
         neuronModel = net.definition.models.hidden
         synapseModel = net.definition.models.synapse
-        newNeuronLayer = int((fromneuron.layer - toneuron.layer)/2)
+        newNeuronLayer = int((toneuron.layer - fromneuron.layer)/2)
         idgenerator = networks.idGenerators.find(net.definition.idGenerator)
         newNeuronid = idgenerator.getNeuronId(net,None,synapse)
         newNeuron = Neuron(newNeuronid,newNeuronLayer,session.curTime,neuronModel)
-        net.put(newNeuron,fromneuron.id,toneuron.id,synapseModel)
+        net.putneuron(newNeuron,fromneuron.id,toneuron.id,synapseModel)
         net.remove(synapse)
-        session.monitor.recordDebug(NeatMutate.name,'添加新节点:'+str(newNeuron))
 
-        return True,'',newNeuron
 
-    def ____do_mutate_addconnection(self,ind,session):
+        return True,'','addnode',newNeuron
+
+    def __do_mutate_addconnection(self,ind,session):
         # 随机选择两个神经元
         net = ind.getPhenome()
         ns = net.getNeurons()
         if len(ns) < 2:
-            return False,'添加连接失败：只有一个神经元',None
+            return False,'ind'+str(ind.id)+'添加连接失败：只有一个神经元','addconnection',None
 
         # 寻找尚未连接的神经元对
         un_conn_neuron_pair = []
@@ -97,76 +118,76 @@ class NeatMutate:
                     continue
                 if n1.layer >= n2.layer:
                     continue
-                if net.getSynapse(n1.id,n2.id) is None:
+                if net.getSynapse(fromId=n1.id,toId=n2.id) is None:
                     un_conn_neuron_pair.append((n1,n2))
         if len(un_conn_neuron_pair)<=0:
-            return False,'添加连接失败：目前任意两个神经元之间都有连接，无法再添加',None
+            return False,'ind'+str(ind.id)+'添加连接失败：目前任意两个神经元之间都有连接，无法再添加','addconnection',None
         # 随机选择
-        index = random.sample(range(len(un_conn_neuron_pair)))
-        n1,n2 = un_conn_neuron_pair[index]
-
+        n1,n2 = choice(un_conn_neuron_pair)
 
         idgenerator = networks.idGenerators.find(net.definition.idGenerator)
         synapseid = idgenerator.getSynapseId(net,n1.id,n2.id)
 
         synapse = Synapse(synapseid,session.curTime,n1.id,n2.id,net.definition.models.synapse)
-        net.connect(synapse)
-        session.monitor.recordDebug(NeatMutate.name, '添加新连接:' + str(synapse))
-        return True,'',synapse
+        net._connectSynapse(synapse)
+        session.monitor.recordDebug(NeatMutate.name, 'ind'+str(ind.id)+'添加新连接' , str(synapse))
+        return True,'变异操作完成','addconnection',synapse
 
     def __do_mutate_deletenode(self,ind,session):
         net = ind.getPhenome()
         ns = net.getHiddenNeurons()
-
+        if collections.isEmpty(ns):
+            return False,'','deletenode',None
         # 随机选择
-        index = random.sample(range(len(ns)))
-        neuron = ns[index]
+        neuron = choice(ns)
         net.remove(neuron)
-        session.monitor.recordDebug(NeatMutate.name, '删除神经元:' + str(neuron.id))
-        return True,'',neuron
+        return True,'','deletenode',neuron
 
     def __do_mutate_deleteconnection(self,ind,session):
         net = ind.getPhenome();
         synapses = net.getSynapses()
+        if collections.isEmpty(synapses):
+            return False,'','deleteconnection',None
         # 随机选择
-        index = random.sample(range(len(synapses)))
-        s = synapses[index]
+        s = choice(synapses)
         net.remove(s)
-        session.monitor.recordDebug(NeatMutate.name, '删除连接:' + str(s.id))
-        return True, '', s
+        session.monitor.recordDebug(NeatMutate.name, 'ind'+str(ind.id)+'删除连接',str(s.id))
+        return True, '','deleteconnection', s
 
     def __doWeightTrain(self,ind,session):
-        net = ind.getPhenome();
+        net = ind.genome
         synapses = net.getSynapses()
         neurons = net.getHiddenNeurons()
 
         range1 = Range(net.definition.models.synapse.weight)
         range2 = Range(net.definition.models.hidden.bias)
         epoch = session.runParam.mutate.weight.epoch
-        origin_mae = None
-        last_mae = None
+
+        evoluator = session.pop.params.features['fitness']
+        if 'fitness' not in ind.features.keys(): #新产生的个体没有计算过适应度
+            value = evoluator.calacute(ind, session)
+            ind['fitness'] = value
+        origin_fitness = ind['fitness']
+        last_fitness = origin_fitness
+        old_fitness = origin_fitness
         for i in range(epoch):
-            # 对权重改变前的网络进行测试
-            task = net.doTest()
-            old_mae = task[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR]
-            if origin_mae is None:origin_mae = old_mae
             # 先记住原有的权重
-            old_weights = [(s,s['weight']) for s in synapses]
+            old_weights = [s['weight'] for s in synapses]
             # 根据权重分布进行随机采样
             for s in synapses:
                 s['weight'] = range1.sample()
             # 记住原有的偏置
-            old_bias = [(n,n['bias']) for n in neurons]
+            old_bias = [n['bias'] for n in neurons]
             # 对神经元偏置进行随机采样:
             for n in neurons:
                 n['bias'] = range2.sample()
 
-            #权重改变后再次对网络进行任务测试
-            task = net.doTest()
-            new_mae = task[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR]
-            if i == epoch-1:last_mae = new_mae
+            #权重改变后再次对网络计算适应度
+            new_fitness = evoluator.calacute(ind, session)
             # 改变后测试误差更小
-            if new_mae <= old_mae:
+            if new_fitness > old_fitness:
+                old_fitness = new_fitness
+                last_fitness = new_fitness
                 continue
 
             # f否则恢复原来的权重
@@ -175,4 +196,4 @@ class NeatMutate:
             for i,n in enumerate(neurons):
                 n['bias'] = old_bias[i]
 
-        session.monitor.recordDebug(NeatMutate.name,'权重修正前后误差变化:old='+str(origin_mae)+",new="+str(last_mae)+",diff="+str(origin_mae - last_mae))
+        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(last_fitness)+",diff="+str(last_fitness - origin_fitness))

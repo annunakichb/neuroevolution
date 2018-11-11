@@ -13,11 +13,12 @@ from utils.properties import Properties
 # 定义适应度评估函数
 def fitness(ind,session):
     net = ind.genome
-    nettask = net.doTest()
-    accuracy = nettask[NeuralNetworkTask.INDICATOR_ACCURACY]
-    return accuracy
+    net.doTest()
+    #accuracy = net[NeuralNetworkTask.INDICATOR_ACCURACY]
+    #return accuracy
     #if accuracy >= 1.0:return 100
-    #return (4 - 4 * nettask[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR]) + 10 * accuracy
+
+    return (4 - 4 * net[NeuralNetworkTask.INDICATOR_MEAN_SQUARED_ERROR]) # + 10 * accuracy
 
 def run():
     # 初始化neat算法模块
@@ -69,7 +70,6 @@ def run():
             }
         }
     }
-    netdef = Properties(netdef)
 
     # 定义种群
     popParam = {
@@ -91,16 +91,16 @@ def run():
             'fitness' : Evaluator('fitness',[(fitness,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
     }
-    popParam = Properties(popParam)
 
     # 定于运行参数
     runParam = {
         'terminated' : {
-            'maxIterCount' : 1000000,                             # 最大迭代次数，必须
-            'maxFitness' : 100,                                   # 最大适应度，必须
+            'maxIterCount' : 300,                                # 最大迭代次数，必须
+            'maxFitness' : 3.95,                                   # 最大适应度，必须
         },
         'log':{
             'individual' : 'elite',                               # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
+            'debug': False                                         # 是否输出调试信息
         },
         'evalate':{
             'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选
@@ -110,29 +110,28 @@ def run():
             'text' : 'neat_selection,neat_crossmate,neat_mutate'  # 进化操作序列
         },
         'mutate':{
-            'propotion' : 2,                                      # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
+            'propotion' : 0.15,                                   # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
             'model':{
                 'rate' : 0.0,                                     # 模型变异比例
                 'range' : ''                                      # 可选的计算模型名称，多个用逗号分开，缺省是netdef中所有模型
-        },
-        'activation':{
-            'rate' : 0.0,                                     # 激活函数的变异比率
-            'range':'sigmod'                                  # 激活函数的
-        },
-        'topo' : {
-            'addnode' : 0.4,                                  # 添加节点的概率
-            'addconnection':0.4,                              # 添加连接的概率
-            'deletenode':0.1,                                 # 删除节点的概率
-            'deleteconnection':0.1                            # 删除连接的概率
-        },
-        'weight':{
-          'epoch':50,                                         # 权重调整次数
+            },
+            'activation':{
+                'rate' : 0.0,                                     # 激活函数的变异比率
+                'range':'sigmod'                                  # 激活函数的
+            },
+            'topo' : {
+                'addnode' : 0.45,                                  # 添加节点的概率
+                'addconnection':0.45,                              # 添加连接的概率
+                'deletenode':0.03,                                 # 删除节点的概率
+                'deleteconnection':0.07                            # 删除连接的概率
+            },
+            'weight':{
+                'epoch':5,                                         # 权重调整次数
+            }
         }
     }
-    }
-    runParam  = Properties(runParam)
 
-    evolutionTask = EvolutionTask(10,popParam,callbacks.neat_callback)
+    evolutionTask = EvolutionTask(1,popParam,callbacks.neat_callback)
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':

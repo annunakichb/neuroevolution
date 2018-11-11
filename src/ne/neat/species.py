@@ -35,9 +35,8 @@ class NeatSpeciesMethod:
                 sp = Specie(id=specieId,inds = species_inds,pop = session.pop)
                 species.append(sp)
             session.pop.species = species
-            session.monitor.recordDebug('NeatSpeciesMethod','物种个数',len(species))
-            for sp in species:
-                session.monitor.recordDebug('NeatSpeciesMethod', 'specie'+str(sp.id), str(sp))
+
+            return session.pop.species
         else:
             raise RuntimeError('物种分类算法名称无效(popParam.species.alg):'+alg)
 

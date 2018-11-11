@@ -23,6 +23,7 @@ class Monitor:
         self.operationResult = {}
         self.logger = self.__createLogger()
         self.callback = callback
+        self.debugEnabled = self.evoTask.runParam.log.debug
 
     def reset(self):
         pass
@@ -61,18 +62,19 @@ class Monitor:
         contents = '事件 = '+stageName + \
                     ',年代 = '+('' if self.evoTask.curSession is None else str(int(self.evoTask.curSession.curTime))) + \
                     ',时间 = '+time.strftime('%H:%M:%S',time.localtime(time.time()))
-
+        self.logger.info("")
         self.logger.info(contents)
 
         keys = [] if collections.isEmpty(kwdatas) else kwdatas.keys()
         for key in keys:
             self.logger.info(key + ':' + str(kwdatas[key]))
 
-        self.logger.info("")
+
 
     def recordDebug(self,module,debugName,debugInfo):
+        if not self.debugEnabled:return
         self.logger.debug('#调试信息('+str(module)+"):"+str(debugName)+":"+str(debugInfo))
-        self.logger.info("")
+        #self.logger.info("")
 
     def recordSessionBegin(self):
         self.__recordSection('Session开始',Session编号=str(self.evoTask.curSession.taskxh))
@@ -123,16 +125,14 @@ class Monitor:
 
 
     def recordSpecies(self,species):
-        kwdatas = {'物种数量':0}
-        if collections.isEmpty(species):
-            self.__recordSection('物种特征', **kwdatas)
-            return
+        if species is None:species = []
+        kwdatas = {'物种数量': len(species)}
 
-        kwdatas['物种数量'] = len(species)
-        for specie in species:
-            kwdatas['specie'+str(specie.id)]  = str(specie)
+        for sp in species:
+            kwdatas['specie' + str(sp.id)] = str(sp)
 
-        self.__recordSection('种群特征', **kwdatas)
+
+        self.__recordSection('物种特征', **kwdatas)
         if self.callback is not None: self.callback('species.record', self)
 
     def recordEpochBegin(self):
@@ -143,19 +143,20 @@ class Monitor:
         while len(s2) < len(s1):
             s2 += "#"
         s = [s1,s2,s1]
+        self.logger.info("")
         self.logger.info(s1)
         self.logger.info(s2)
         self.logger.info(s1)
         if self.callback is not None: self.callback('epoch.begin', self)
 
-    def recordOperation(self,operation,result):
-        self.__recordSection('执行操作='+operation.name,result=str(result[1]))
+    def recordOperation(self,operation,result,exeception=None):
+        self.__recordSection(operation.name,result=str(result[1]))
         self.operationResult[operation.name] = result
         if self.callback is not None: self.callback('operation.completed', self)
 
 
     def recordEpochEnd(self):
-        self.__recordSection('迭代结束')
+        self.__recordSection('本次迭代结束')
         if self.callback is not None: self.callback('epoch.end', self)
 
     def recordSessionEnd(self,msg):

@@ -8,6 +8,7 @@ from brain.networks import NeuralNetwork
 from brain.runner import NeuralNetworkTask
 from evolution.env import Evaluator
 from evolution.session import EvolutionTask
+from utils.properties import Properties
 
 
 # 适应度计算函数
@@ -98,6 +99,7 @@ def run():
         }
     }
 
+
     # 定义种群
     popParam = {
         'indTypeName' : 'network',                                #种群的个体基因类型名，必须，该类型的个体基因应已经注册过，参见evolution.agent,必须
@@ -107,15 +109,18 @@ def run():
         },
         'genomeDefinition' : netdef,                              #基因定义参数,可选
         'size':100,                                               #种群大小，必须
-        'elitistSize':0.2,                                        #精英个体占比，小于1表示比例，大于等于1表示数量
+        'elitistSize':0.05,                                        #精英个体占比，小于1表示比例，大于等于1表示数量
         'species':{                                               #物种参数，可选
-            'method':'',                                          #物种分类方法
-            'size':0                                              #物种个体数量限制，0表示无限制或动态
+            'method':'neat_species',                              # 物种分类方法,在物种参数中必须
+            'alg':'kmean',                                        # 算法名称
+            'size': 5,                                            # 物种个体数量限制，0表示无限制或动态
+            'iter':50,                                            # 算法迭代次数
         },
         'features':{                                              # 特征评估函数配置，必须
-            'fitness' : Evaluator('fitness',{fitness,1.0})        # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
+            'fitness' : Evaluator('fitness',[(fitness,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
     }
+
 
     # 定于运行参数
     runParam = {
@@ -124,7 +129,8 @@ def run():
             'maxFitness' : 100,                                   # 最大适应度，必须
         },
         'log':{
-            'individual' : 'all',                                 # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
+            'individual' : 'elite',                                 # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
+            'debug': False                                        # 是否输出调试信息
         },
         'evalate':{
             'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选
@@ -134,26 +140,28 @@ def run():
             'text' : 'neat_selection,neat_crossmate,neat_mutate'  # 进化操作序列
         },
         'mutate':{
-            'propotion' : 2,                                      # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
+            'propotion' : 0.1,                                      # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
             'model':{
                 'rate' : 0.0,                                     # 模型变异比例
                 'range' : ''                                      # 可选的计算模型名称，多个用逗号分开，缺省是netdef中所有模型
-        },
-        'activation':{
-            'rate' : 0.0,                                     # 激活函数的变异比率
-            'range':'sigmod'                                  # 激活函数的
-        },
-        'topo' : {
-            'addnode' : 0.4,                                  # 添加节点的概率
-            'addconnection':0.4,                              # 添加连接的概率
-            'deletenode':0.1,                                 # 删除节点的概率
-            'deleteconnection':0.1                            # 删除连接的概率
-        },
-        'weight':{
-          'epoch':5,                                          # 权重调整次数
+            },
+            'activation':{
+                'rate' : 0.0,                                     # 激活函数的变异比率
+                'range':'sigmod'                                  # 激活函数的
+            },
+            'topo' : {
+                'addnode' : 0.4,                                  # 添加节点的概率
+                'addconnection':0.4,                              # 添加连接的概率
+                'deletenode':0.1,                                 # 删除节点的概率
+                'deleteconnection':0.1                            # 删除连接的概率
+            },
+            'weight':{
+                'epoch':20,                                          # 权重调整次数
+            }
         }
+
     }
-    }
+
 
 
     evolutionTask = EvolutionTask(10,popParam,neat.callbacks.neat_callback)

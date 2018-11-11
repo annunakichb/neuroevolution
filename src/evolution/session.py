@@ -63,10 +63,10 @@ class Session:
     #region 运行启动和终止
 
     def isTerminted(self):
-        if self.curTime >= self.runParam.terminated.maxIterCount:
+        if self.runParam.terminated.maxIterCount > 0 and self.curTime >= self.runParam.terminated.maxIterCount:
             return True,'超过最大迭代次数'+str(self.runParam.terminated.maxIterCount)
 
-        if self.pop['fitness']['max'] >= self.runParam.terminated.maxFitness:
+        if self.runParam.terminated.maxFitness > 0 and self.pop['fitness']['max'] >= self.runParam.terminated.maxFitness:
             return True,'达到最大适应度('+ str(self.pop['fitness']['max']) + '>=' + str(self.runParam.terminated.maxFitness)
 
         return False,''
@@ -183,6 +183,8 @@ class EvolutionTask:
         :param popParam:  dict 种群参数
         '''
         self.count = count
+        popParam = Properties(popParam)
+        popParam.genomeDefinition = Properties(popParam.genomeDefinition)
         self.popParam = popParam
 
         self.runParam = None
@@ -200,6 +202,7 @@ class EvolutionTask:
         :param runParam: 运行参数
         :return:
         '''
+        runParam = Properties(runParam)
         self.runParam = runParam
         self.monitor = Monitor(self,callback = self.callback)
 

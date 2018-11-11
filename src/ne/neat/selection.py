@@ -100,18 +100,21 @@ class NeatSelection():
 
         # 对所有个体按照适应度从高到低排序
         session.pop.inds.sort(key=lambda x:x['fitness']+0.000001 if x in session.pop.eliest else 0,reverse = True)
-        # 为每个个体计算一个选择概率（适应度越高和越低的被选择的概率就高）
-        fitnesssum = sum(list(map(lambda ind:ind['fitness'],session.pop.inds)))
-        mutateSelProb = [1-(ind['fitness']/fitnesssum) for index,ind in enumerate(session.pop.inds)]
+        # 选择候选变异个体（精英个体将被排除）
+        candidateInds = collections.findall(session.pop.inds,lambda ind:ind not in session.pop.eliest)
+        # 为每个个体计算一个选择概率（适应度越低的被选择的概率就高）
+        max,avg,min,stdev = collections.rangefeature(list(map(lambda ind:ind['fitness'],candidateInds)))
+        #fitnesssum = sum(list(map(lambda ind:ind['fitness'],candidateInds)))
+        mutateSelProb = [1-((ind['fitness']-min)/(max-min)) for index,ind in enumerate(candidateInds)]
         mutateSelProb = np.array(mutateSelProb)
         p = mutateSelProb / mutateSelProb.sum()
         np.random.seed(0)
         #p = np.array(mutateSelProb)
-        mutateinds = np.random.choice(session.pop.inds, size=mutateCount,p=p.ravel())
+        mutateinds = np.random.choice(candidateInds, size=mutateCount,p=p.ravel())
         session.monitor.recordDebug('neat_selection', '变异的个体',
-                                    reduce(lambda i, j: str(i.id) + ',' + str(j.id), mutateinds))
+                                    reduce(lambda i, j: i + ',' + j, map(lambda ind:str(ind.id),mutateinds)))
 
-        return True, '选择操作完成', (corssmeateInds, metateinds)
+        return True, '选择操作完成,其中淘汰个体数量='+str(len(removeIndids))+',交叉个体数量='+str(len(corssmeateInds))+',变异个体数量='+str(len(mutateinds)), (corssmeateInds, list(map(lambda ind : ind.id,mutateinds)))
 
 
 

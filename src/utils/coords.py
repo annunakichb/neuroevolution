@@ -49,3 +49,9 @@ class Coordination:
         if self.values is None:self.values = []
         if len(self.values)<=0:return ''
         return  reduce(lambda x,y:x+","+y,map(lambda v: "{:d}".format(v) if v == int(v) else "{:.2f}".format(v),self.values))
+
+    def center(cls,coord1,coord2):
+        vals = []
+        for i in range(min(coord1.values,coord2.values)):
+            vals.append((coord1.values[i]+coord2.values[i])/2)
+        c = Coordination(vals)

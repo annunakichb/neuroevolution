@@ -49,64 +49,11 @@ class NeuralNetworkTask:
         self.test_x = test_x
         self.test_y = test_y
         self.test_result = [[]]*len(test_y)
-        self.test_stat = {}
         self.kwargs = {} if kwargs is None else kwargs
         if 'deviation' not in self.kwargs.keys():self.kwargs['deviation'] = 0.00001
         if 'multilabel' not in self.kwargs.keys():self.kwargs['multilabel'] = False
 
-    # 记录测试结果
-    def setTestResult(self,i,test_result,doStat=False):
-        '''
-        记录测试结果
-        :param i 样本序号
-        :param test_result:  测试结果
-        :return: None
-        '''
-        self.test_result[i] = test_result
-        if doStat:
-            self.__doTestStat__()
-    #endregion
 
-    #region 统计
-    def __doTestStat__(self):
-        '''
-        对测试结果进行统计
-        :return: None
-        '''
-        testcount = correctcount = 0
-        mae = mse = 0.0
-        for index,result in enumerate(self.test_result):
-            if collections.equals(self.test_result[index],self.test_y[index]):
-                correctcount += 1
-            else:
-                diff = abs(self.test_result[index]-self.test_y[index])
-                if not self.kwargs['multilabel'] and diff <= self.kwargs['deviation']:
-                    correctcount += 1
-                elif self.kwargs['multilabel']:
-                    if isinstance(self.kwargs['deviation'],float):
-                        if np.average(diff) <= self.kwargs['deviation']:
-                            correctcount += 1
-                    elif isinstance(self.kwargs['deviation'],list):
-                        if collections.all(diff - self.kwargs['deviation'],lambda t : t <0):
-                            correctcount += 1
-
-            mae += abs(self.test_result[index]-self.test_y[index])
-            mse += pow(self.test_result[index]-self.test_y[index],2)
-            testcount += 1
-
-        self.test_stat[NeuralNetworkTask.INDICATOR_TEST_COUNT] = testcount
-        self.test_stat[NeuralNetworkTask.INDICATOR_CORRECT_COUNT] = correctcount
-        self.test_stat[NeuralNetworkTask.INDICATOR_ACCURACY] = correctcount/testcount
-        self.test_stat[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR] = mae / testcount
-        self.test_stat[NeuralNetworkTask.INDICATOR_MEAN_SQUARED_ERROR] = mse / testcount
-
-    def __setitem__(self, key, value):
-        self.test_stat[key] = value
-
-    def __getitem__(self, item):
-        if item in self.test_stat.keys():return self.test_stat[item]
-        return super(NeuralNetworkTask,self).__getitem__(item)
-    #endregion
 
 
 # 简单前馈神经网络运行期
@@ -179,9 +126,9 @@ class SimpleNeuralNetworkRunner:
             # 取得结果
             outputs = list(map(lambda n:n['value'],outputNeurons))
             if len(outputs) == 1:outputs = outputs[0]
-            task.setTestResult(index,outputs)
+            net.setTestResult(index,outputs)
 
-        task.__doTestStat__()
+
 
 # 基于tf的神经网络运行器
 class TensorflowNeuralNetworkRunner:

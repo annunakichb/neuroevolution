@@ -1,4 +1,5 @@
 from enum import Enum
+import  numpy as np
 import threading
 from functools import reduce
 from utils import collections as collections
@@ -6,7 +7,7 @@ from utils.properties import Registry
 from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
-
+from brain.runner import NeuralNetworkTask
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
 # 网络类型
@@ -70,6 +71,7 @@ class NeuralNetwork:
         self.synapses = []
         self.attributes = {}
         self.taskstat = {}
+        self.taskTestResult = []
 
     def __str__(self):
         ns = self.getNeurons()
@@ -91,11 +93,11 @@ class NeuralNetwork:
         for ns in self.neurons:
             for n in ns:
                 if newnet.getNeuron(n.id) is not None:continue
-                newnet.__putneuron(n)
+                newnet.putneuron(n)
         for ns in net.neurons:
             for n in ns:
                 if newnet.getNeuron(n.id) is not None: continue
-                newnet.__putneuron(n)
+                newnet.putneuron(n)
 
         for synapse in self.synapses:
             if newnet.getSynapse(id=synapse.id) is not None:continue
@@ -366,7 +368,7 @@ class NeuralNetwork:
         :param synapseModelConfig: dict 突触计算模型配置
         :return:
         '''
-        idGenerator = self.definition.get('idGenerator','default')
+        idGenerator = idGenerators.find(self.definition.get('idGenerator','default'))
         if idGenerator is None:raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")
         if synapseModelConfig is None: raise RuntimeError(
             "连接神经元失败(NeuralNetwork.connect(srcid,destid)):synapseModelConfig效")
@@ -375,7 +377,7 @@ class NeuralNetwork:
             if self.getNeuron(id=srcid) is None:raise  RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+srcid)
             if self.getNeuron(id=destid) is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+destid)
 
-            synapse = Synapse(idGenerator.getSynapseId(self,srcid,destid),id,birth,srcid,destid,synapseModelConfig)
+            synapse = Synapse(idGenerator.getSynapseId(self,srcid,destid),birth,srcid,destid,synapseModelConfig)
             self._connectSynapse(synapse)
             return self
         if srcid is list:
@@ -386,7 +388,7 @@ class NeuralNetwork:
                 self.connect(srcid,did,birth,synapseModelConfig)
         return self
 
-    def __putneuron(self,neuron,inids=None,outinds=None,synapseModelConfig=None):
+    def putneuron(self,neuron,inids=None,outinds=None,synapseModelConfig=None):
         '''
         添加神经元,会检查神经元id，是否重复（重复会删除旧的）
         :param neuron:   Neuron 待添加神经元
@@ -412,12 +414,14 @@ class NeuralNetwork:
         layerindex = -1
         if len(self.neurons)<=0:
             self.neurons.append([])
-            self.neurons[0].append(neuron)
             layerindex = 0
         else:
         # 根据神经元所在层查找对应位置
             for i,ns in enumerate(self.neurons):
-                if collections.isEmpty(ns):continue
+                if collections.isEmpty(ns):
+                    del self.neurons[i]
+                    i -= 1
+                    continue
                 if ns[0].layer == neuron.layer:
                     layerindex = i
                 elif ns[0].layer > neuron.layer:
@@ -427,7 +431,8 @@ class NeuralNetwork:
                 continue
 
         # 添加神经元
-        self.neurons[layerindex].append(neuron)
+        if layerindex < 0: self.neurons.append([neuron])
+        else: self.neurons[layerindex].append(neuron)
 
         # 连接
         if inids is not None and synapseModelConfig is not None:
@@ -456,24 +461,25 @@ class NeuralNetwork:
         if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")
 
         n = Neuron(idGenerator.getNeuronId(self,coord),layer,birth,neuronModelConfig,coord)
-        return self.__putneuron(n,inids,outinds,synapseModelConfig)
+        return self.putneuron(n,inids,outinds,synapseModelConfig)
 
 
     def remove(self,ele):
         if ele is None:return
-        if ele is Synapse:
+        if isinstance(ele,Synapse):
             self.synapses.remove(ele)
             return
-        if ele is Neuron:
+        if isinstance(ele,Neuron):
             input_sypanses = self.getInputSynapse(ele.id)
             output_sypanses = self.getOutputSynapse(ele.id)
-            synapses = [].extend(input_sypanses)
-            synapses.extend(output_sypanses)
+            synapses = output_sypanses + input_sypanses
             collections.foreach(synapses,lambda s:self.remove(s))
-            for ns in self.neurons:
-                for n in ns:
+            for i,ns in enumerate(self.neurons):
+                for j,n in enumerate(ns):
                     if n == ele:
-                        ns.remove(n);
+                        ns.remove(n)
+                        if len(ns)<=0:
+                            self.neurons.remove(ns)
                         return
 
 
@@ -503,8 +509,68 @@ class NeuralNetwork:
     def doTest(self):
         runner = self.getRunner()
         task = self.definition.runner.task
+        self.taskTestResult = []
+        self.taskstat = {}
         runner.doTest(self, task)
-        return task
+        self.doTestStat()
+        return self.taskTestResult
+
+    def setTestResult(self,i,test_result,doStat=False):
+        '''
+        记录测试结果
+        :param i 样本序号
+        :param test_result:  测试结果
+        :return: None
+        '''
+        if self.taskTestResult is None:self.taskTestResult = []
+        while i > len(self.taskTestResult):
+            self.taskTestResult.append(0.0)
+        self.taskTestResult.append(test_result)
+
+        if doStat:
+            self.doTestStat()
+
+    def doTestStat(self):
+        '''
+        对测试结果进行统计
+        :return: None
+        '''
+        task = self.definition.runner.task
+        testcount = correctcount = 0
+        mae = mse = 0.0
+        for index,result in enumerate(self.taskTestResult):
+            if collections.equals(self.taskTestResult[index],task.test_y[index]):
+                correctcount += 1
+            else:
+                diff = abs(self.taskTestResult[index]-task.test_y[index])
+                if not task.kwargs['multilabel'] and diff <= task.kwargs['deviation']:
+                    correctcount += 1
+                elif task.kwargs['multilabel']:
+                    if isinstance(task.kwargs['deviation'],float):
+                        if np.average(diff) <= task.kwargs['deviation']:
+                            correctcount += 1
+                    elif isinstance(task.kwargs['deviation'],list):
+                        if collections.all(diff - task.kwargs['deviation'],lambda t : t <0):
+                            correctcount += 1
+
+            mae += abs(self.taskTestResult[index]-task.test_y[index])
+            mse += pow(self.taskTestResult[index]-task.test_y[index],2)
+            testcount += 1
+
+
+        self.taskstat[NeuralNetworkTask.INDICATOR_TEST_COUNT] = testcount
+        self.taskstat[NeuralNetworkTask.INDICATOR_CORRECT_COUNT] = correctcount
+        self.taskstat[NeuralNetworkTask.INDICATOR_ACCURACY] = correctcount/testcount
+        self.taskstat[NeuralNetworkTask.INDICATOR_MEAN_ABSOLUTE_ERROR] = mae / testcount
+        self.taskstat[NeuralNetworkTask.INDICATOR_MEAN_SQUARED_ERROR] = mse / testcount
+
+    def __setitem__(self, key, value):
+        self.taskstat[key] = value
+
+    def __getitem__(self, item):
+        if item in self.taskstat.keys():return self.taskstat[item]
+        return None
+        #return super(NeuralNetwork,self).__getitem__(item)
 
     #endregion
 
