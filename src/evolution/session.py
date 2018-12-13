@@ -145,6 +145,7 @@ class Session:
             self.pop.evaulate(self)
             self.monitor.recordPopulationFeatures()
             self.monitor.recordIndividuals()
+            self.popRecords.append(self.__createPopRecord())
 
             # 进行种群划分
             speciesMethod = agent.speciesType.find(self.popParam.species.method)
@@ -171,6 +172,7 @@ class Session:
             r[featureKey]['max'] = self.pop[featureKey]['max']
             r[featureKey]['average'] = self.pop[featureKey]['average']
             r[featureKey]['min'] = self.pop[featureKey]['min']
+            r[featureKey]['stdev'] = self.pop[featureKey]['stdev']
         return r
     #endregion
 

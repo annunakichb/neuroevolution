@@ -10,11 +10,11 @@ class EvolutionViewer:
     def __init__(self):
         pass
 
-    def drawSession(monitor,session,featureKey, ylog=False, view=False):
-        generation = range(int(session.curTime))
+    def drawSession(self,monitor,session,featureKey, ylog=False, view=False):
+        generation = range(int(session.curTime+1))
         max_feature = [r[featureKey]['max'] for r in session.popRecords]
-        avg_feature  = [r[featureKey]['average'] for r in session.popRecords]
-        stdev_feature = [r[featureKey]['stdev'] for r in session.popRecords]
+        avg_feature  = np.array([r[featureKey]['average'] for r in session.popRecords])
+        stdev_feature = np.array([r[featureKey]['stdev'] for r in session.popRecords])
 
         plt.plot(generation, avg_feature, 'b-', label="average")
         plt.plot(generation, avg_feature - stdev_feature, 'g-.', label="-1 sd")

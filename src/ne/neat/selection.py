@@ -58,7 +58,7 @@ class NeatSelection():
                 removeIndids.append(removeIndid)
                 del specie.indids[-1]               # 从物种记录中删除
                 session.pop.inds.remove(removeInd)     # 从种群记录中删除
-        session.monitor.recordDebug('neat_selection','删除的个体',reduce(lambda i,j:str(i)+','+str(j),removeIndids))
+        session.monitor.recordDebug('neat_selection','删除的个体',collections.mapreduce(removeIndids,reducefunc=lambda i,j:str(i)+','+str(j)))
 
         # 遍历所有物种，如果有物种个体数量为0，则将该物种删除
         for i in range(len(species)):
