@@ -2,6 +2,7 @@
 import pygraphviz as pgv
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 import math
@@ -114,7 +115,7 @@ class Net:
     '''
     网络
     '''
-    eplison = 0.1           # 样本距离系数，样本的映射向量距离大于它乘以样本书的平方根，则是可区分样本对
+    eplison = 0.01          # 样本距离系数，样本的映射向量距离大于它乘以样本书的平方根，则是可区分样本对
     min_sensitivty = 0.85   # 敏感度下限
     sensitivty_lower_num = 1# 敏感度连续下降的次数
     cost_k1 = 0.5           # 计算能耗中节点数量的比例参数
@@ -133,6 +134,10 @@ class Net:
         self.leafs = [self.root]       #叶子节点数
 
         self.reset()
+        self.spiltcount = 0  # 发生分裂的次数
+        self.reconstructcount = 0  # 发生重构的次数
+        self.sensitivty = []  # 网络灵敏度
+        self.energycost = []            #网络运行所有样本的能量消耗
 
     def reset(self):
         '''
@@ -142,11 +147,11 @@ class Net:
         self.samples = []               #所有样本，在线会动态变化，离线则不变
         self.differentablecount = 0     #所有样本对中属于可区别集的数量
         self.activation_energy_cost = 0 # 节点激活的能耗
-        self.sensitivty = []            #网络灵敏度
-        self.energycost = []            #网络运行所有样本的能量消耗
+        #self.sensitivty = []            #网络灵敏度
+        #self.energycost = []            #网络运行所有样本的能量消耗
 
-        self.spiltcount = 0             # 发生分裂的次数
-        self.reconstructcount = 0       # 发生重构的次数
+        #self.spiltcount = 0             # 发生分裂的次数
+        #self.reconstructcount = 0       # 发生重构的次数
 
     def put(self,sample):
         '''
@@ -180,39 +185,43 @@ class Net:
 
     def dochange(self):
         # 计算网络平均能耗
-        self.energycost.append(self.computeEnergycost())
+        if len(self.energycost) <= 0:
+            self.energycost.append(self.computeEnergycost())
 
         # 计算目前网络的数据敏感度
-        self.sensitivty.append(self.computeSenstivity())
+        if len(self.sensitivty) <= 0:
+            self.sensitivty.append(self.computeSenstivity())
+
+        #print('sensitivty=%.2f,cost=%.2f\n' % (self.sensitivty[-1], self.energycost[-1]))
 
         action  = ''
-        while 1:
-            # 敏感度低于下限，执行网络节点分裂过程
-            if self.sensitivty[-1] != 0 and self.sensitivty[-1] < Net.min_sensitivty:
-                self.__spilt()
-                self.spiltcount += 1
-                action = '分裂(敏感下限)'
-                print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
-                self.energycost.append(self.computeEnergycost())
-                self.sensitivty.append(self.computeSenstivity())
-            # 敏感度连续Net.sensitivty_lower_num次不升高
-            elif len(self.sensitivty)>Net.sensitivty_lower_num+1 and self.isDescending(self.sensitivty[-1-Net.sensitivty_lower_num:]):
-                self.__spilt()
-                self.spiltcount += 1
-                action = '分裂(敏感度连续下降)'
-                print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
-                self.energycost.append(self.computeEnergycost())
-                self.sensitivty.append(self.computeSenstivity())
-            # 如果网络能耗高于上限，执行网络重构操作
-            elif self.energycost[-1] >  Net.cost_k1 * len(self.leafs) + Net.cost_k2 * math.exp(-len(self.leafs)/5) * len(self.leafs):
-                self.__reconstruct()
-                self.reconstructcount += 1
-                action = '重构'
-                print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
-                self.energycost.append(self.computeEnergycost())
-                self.sensitivty.append(self.computeSenstivity())
-            else:
-                break
+        # 敏感度低于下限，执行网络节点分裂过程
+        if self.sensitivty[-1] != 0 and self.sensitivty[-1] < Net.min_sensitivty:
+            action = '分裂(敏感度低于阈值)'
+            print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
+            self.__spilt()
+            self.spiltcount += 1
+        # 敏感度连续Net.sensitivty_lower_num次不升高
+        elif len(self.sensitivty) > Net.sensitivty_lower_num + 1 and self.isDescending(
+                self.sensitivty[-1 - Net.sensitivty_lower_num:]):
+            action = '分裂(敏感度连续下降)'
+            print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
+            self.__spilt()
+            self.spiltcount += 1
+        # 如果网络能耗高于上限，执行网络重构操作
+        elif self.energycost[-1] > Net.max_energy_cost:
+        #elif self.energycost[-1] > Net.cost_k1 * len(self.leafs) + Net.cost_k2 * math.exp(-len(self.leafs) / 5) * len(
+        #        self.leafs):
+            action = '重构'
+            print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
+            self.__reconstruct()
+            self.reconstructcount += 1
+
+        else:
+            print('sensitivty=%.2f,cost=%.2f,action=%s\n' % (self.sensitivty[-1], self.energycost[-1], action))
+
+
+
 
         #print('sample=%s,sensitivty=%.2f,cost=%.2f,action=%s\n' % (str(sample), self.sensitivty[-1], self.energycost[-1],action))
 
@@ -368,14 +377,16 @@ class Net:
         #self.drawdata()
 
     def drawdata(self,sn):
+        fig = plt.figure(3)
+        asp = fig.add_subplot(111)
         for node in self.leafs:
             mu, sigma = node.center, node.sigma
             sampleNo = 1000
             np.random.seed(0)
             s = np.random.normal(mu, sigma, sampleNo)
-            plt.hist(s, bins=100)
+            asp.hist(s, bins=200)
         plt.show()
-        plt.savefig('distribution'+str(sn)+'.png')
+        fig.savefig('distribution'+str(sn)+'.png')
 
     def drawnode(self,node):
         if node is None:
@@ -434,40 +445,87 @@ class Net:
 
 if __name__ == '__main__':
 
+    Net.max_energy_cost = 0.0
+    max_cost = []
+    max_sen = []
+    real_cost = []
+    node_cost = []
+    count_node = []
+    count_leaf = []
 
-    # 构造初始网络
-    root = Node(center=np.array([0.5]), width=1.0)
-    net = Net(root)
-    leafcount = len(net.leafs)
+    opitmal_net = None
+    for k in range(30):
+        # 构造初始网络
+        root = Node(center=np.array([0.5]), width=1.0)
+        net = Net(root)
+        leafcount = len(net.leafs)
 
-    i = 1
-    while 1:
-        # 根据标准正态分布采样100个值
-        values = np.random.normal(0.0, 1.0, 50)
+        Net.max_energy_cost += 1.0
+        max_cost.append(Net.max_energy_cost)
 
-        # 正规化到0-1之间
-        values = (values - values.min()) / (values.max() - values.min())
+        for i in range(50):
+            # 根据标准正态分布采样100个值
+            values1 = np.random.normal(0.0, 1.0, 30)
+            values2 = np.random.normal(2.0, 1.0, 30)
+            values = np.append(values1,values2)
+            np.random.shuffle(values)
 
-        # 逐个输入样本
-        for i,value in enumerate(values):
-            net.put(np.array([value]))
+            # 正规化到0-1之间
+            values = (values - values.min()) / (values.max() - values.min())
 
-        # 结构改变
-        net.dochange()
+            # 逐个输入样本
+            for k,value in enumerate(values):
+                net.put(np.array([value]))
 
-        # 显示结果
-        net.draw(i)
-        net.drawdata(i)
+            # 计算能耗
+            net.energycost.append(net.computeEnergycost())
+            net.sensitivty.append(net.computeSenstivity())
+
+
+            # 结构改变
+            net.dochange()
+
+            # 显示结果
+            #net.draw(i)
+            #net.drawdata(i)
+
+
+
+            # 准备下一次迭代
+            net.reset()
+
         print("分裂次数=" + str(net.spiltcount) + ",重构次数=" + str(net.reconstructcount) + ",节点总数=" + str(
             net.nodescount) + ",叶子节点数=" + str(len(net.leafs)) + '\n')
 
-        # 判断终止条件
-        if math.fabs(leafcount-len(net.leafs))==0:
-            break
-        # 准备下一次迭代
-        net.reset()
-        i += 1
+        if opitmal_net is None or (opitmal_net.sensitivty[-1] < net.sensitivty[-1] and net.energycost[-1] < Net.max_energy_cost):
+            opitmal_net = net
 
+        max_sen.append(net.sensitivty[-1])
+        real_cost.append(net.energycost[-1])
+        node_cost.append((net.energycost[-1]-Net.cost_k1*len(net.leafs))/(Net.cost_k2*len(net.leafs)))
+        count_node.append(net.energycost[-1])
+        count_leaf.append(len(net.leafs))
 
+    fig = plt.figure(1)
+    sp = fig.add_subplot(321)
+    sp.plot(max_cost,max_sen)
 
+    sp = fig.add_subplot(322)
+    sp.plot(max_cost, real_cost)
 
+    sp = fig.add_subplot(323)
+    sp.plot(max_cost, node_cost)
+
+    #sp = fig.add_subplot(324)
+    #sp.plot(max_cost,count_node)
+
+    sp = fig.add_subplot(324)
+    sp.plot(max_cost,count_leaf)
+
+    fig = plt.figure(2)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(max_sen, real_cost, count_leaf, label=' ')
+
+    plt.show()
+
+    opitmal_net.drawdata(1)
