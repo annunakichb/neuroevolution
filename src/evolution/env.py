@@ -1,5 +1,5 @@
 from functools import reduce
-from utils.strs import ExtendJsonEncoder
+from utils.collections import ExtendJsonEncoder
 import  utils.strs as strs
 
 __all__ = ['EvaluationValue','Evaluator']

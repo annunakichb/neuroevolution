@@ -2,6 +2,7 @@ from domains.ne.cartpoles.cartpole import SingleCartPole
 import domains.ne.cartpoles.cartpole as cartpole
 
 import ne
+import ne.callbacks as callbacks
 import ne.neat as neat
 from brain.networks import NetworkType
 from brain.networks import NeuralNetwork
@@ -26,7 +27,7 @@ def fitness(ind,session):
         fitness = 0.0
         while sim.t < simulation_seconds:
             inputs = sim.get_scaled_state()
-            net.definition.task.test_x = inputs
+            net.definition.runner.task.test_x = [inputs]
             action = net.doTest()
 
             # Apply action to the simulated cart-pole
@@ -45,7 +46,7 @@ def fitness(ind,session):
 
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
-    ne.callbacks(event,monitor)
+    ne.callbacks.neat_callback(event,monitor)
     if event == 'session.end':
         filename = 'singlecartpole.session.'+ str(monitor.evoTask.curSession.taskxh)+'.mov'
         eliest = monitor.evoTask.curSession.pop.eliest
@@ -62,7 +63,7 @@ def run():
     # 定义网络
     netdef = {
         'netType' : NetworkType.Perceptron,                       # NetworkType，网络类型,必须
-        'neuronCounts' : [4,1,1],                                 # list（初始）网络各层神经元数量,必须
+        'neuronCounts' : [4,1],                                   # list（初始）网络各层神经元数量,必须
         'idGenerator' :  'neat',                                  # str 生成网络，神经元，突触id的类，参见DefauleIDGenerator,list idgenerator命令可以列出所有的id生成器对象
         'config' : {
             'layered' : True,                                     # bool 是否分层,可选
@@ -94,7 +95,7 @@ def run():
             'synapse':{
                 'name':'synapse',                                 # str 突触计算模型配置名称,可选
                 'modelid':'synapse',                              # str 突触计算模型Id，必须
-                'weight':'uniform[-30.0,30.0]'                    # str 突触学习变量，均匀分布，必须
+                'weight':'uniform[-30.0:30.0]'                    # str 突触学习变量，均匀分布，必须
             }
         }
     }
@@ -164,7 +165,7 @@ def run():
 
 
 
-    evolutionTask = EvolutionTask(10,popParam,neat.callbacks.neat_callback)
+    evolutionTask = EvolutionTask(10,popParam,callback)
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':

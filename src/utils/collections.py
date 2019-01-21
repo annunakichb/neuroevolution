@@ -1,13 +1,13 @@
 import json
-from functools import reduce
+import  numpy as np
 import  copy
-from utils.strs import *
+from functools import reduce
+from enum import Enum
+
 import utils.strs as strs
 
-import  numpy as np
-
 __all__ = ['first','findall','count','foreach','isEmpty','listtostr','listtostr','dicttostr','rangefeature',
-            'dicttostr','dict_getattr','dict_setattr','equals','all']
+            'dicttostr','dict_getattr','dict_setattr','equals','all','ExtendJsonEncoder']
 
 #region 字段扩展
 
@@ -175,7 +175,7 @@ def listtostr(list,**props):
         if format == 'csv':
             ss += strs.format(value)
         else:
-            ss += format.replace('{$P}', getName(value)).replace('{$V}', strs.format(value))
+            ss += format.replace('{$P}', strs.getName(value)).replace('{$V}', strs.format(value))
     return ss
 
 #字段转字符串
@@ -212,3 +212,18 @@ def rangefeature(list):
 
 #endregion
 
+
+#region json扩展
+class ExtendJsonEncoder(json.JSONEncoder):
+    ignoreTypes = []
+    autostrTypes = []
+    def default(self, obj):
+        if isinstance(obj,Enum):
+            return str(obj)
+        if any(ExtendJsonEncoder.ignoreTypes,lambda t:isinstance(obj,t)):
+            return None
+        if any(ExtendJsonEncoder.autostrTypes,lambda t:isinstance(obj,t)):
+            return str(obj)
+        return json.JSONEncoder.default(self, obj)
+
+#endregion

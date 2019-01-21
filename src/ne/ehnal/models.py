@@ -15,7 +15,7 @@ Evolutionary Heterogeneous Neural Network Based on Attention Logic
 二. 突触
 2.1 突触的构成：每个突触由上游神经元(只能一个)，下游神经元（只能一个），一组状态，一组学习变量和参数变量，一个计算模型组成
 2.2 突触维持的内部状态包括：输入状态值，计算状态值，状态时间。当连接上游神经元激活，突触状态值才有效，状态时间小于0表示突触状态值无效
-2.3 突触内部变量包括学习变量和参数变量
+2.3 突触内部变量包括学习变量和参数变量,可能的变量（但不限于）
 A 权重：既可能是学习变量，也可能是参数变量
 B 延时：既可能是学习变量，也可能是参数变量
 C 抑制: 参数变量，取值非0表示该突触为抑制型突触
@@ -32,7 +32,21 @@ A  计算状态值 = 权重 * 输入状态值
 2.5.3 强度学习模型：？
 
 三 神经元
-3.1 神经元的构成：多个突触组或一个突触集，一组状态，一组学习变量和参数变量，一个计算模型组成。其中一个突触组表示一个树突分支(一种简化的房室模型)
+3.1 神经元的构成：多个突触组组成一个突触集，一组状态，一组学习变量和参数变量，一个关注逻辑表达式，一个计算模型,一个学习模型组成。
+3.2 突触组：表示一个树突分支(一种简化的房室模型)。
+3.3 状态包括：值，激活频率，激活状态，激活时间.
+3.4 关注逻辑：
+3.4.1 关注值分布：（i.value）in 关注函数(pc,pw)   关注函数可以是gauss函数或者范围函数
+3.4.2 关注差值分布：(i1.value - i2.value) in 关注函数(pc,pw)
+3.4.3 关注联合分布：m1,m2
+3.4.1 阈值逻辑：si.value in range[v11,v12] and|or sj.value in range[v21.v22] ..... ，and和or只能取一个
+3.4.2 高斯逻辑：si.value in gauss[v11,v12] and|or sj.value in guass[v21.v22] .高斯逻辑的输出作为激活频率
+3.4.3 时间逻辑：si.time-sj.time <=t1 and sj.time - sk.time < t2
+3.4.4 频率逻辑：si.frenccy > [$v1] or sj.frecny > [$v2]
+3.4.5 激活逻辑：si.activation and sj.activation....  and和or只能取一个
+         逻辑表达式的设定有三种方式：预先设定：在神经元创建的时候人为设定好
+                                 生成设定：在神经元第一次进入网络，由输入信号的特征决定
+                                 统计设定：在一段运行时间内，由输入的统计特征决定
 3.2 神经元的状态包括：值，激活频率，激活状态，激活时间。
 3.3 神经元的变量根据计算模型的不同而不同，可能的计算模型：
 3.3.1 感知机模型:
@@ -75,3 +89,107 @@ D.2 延时变量学习模型：随机进化
 # 神经元维持一组内部状态，包括当前值，激活频率，激活频率形式，激活状态，激活时间
 # 神经元输入：突触状态值和突触时间
 '''
+from enum import Enum
+from utils.strs import NameInfo
+from utils.properties import Variable
+
+class AttentionType(Enum):
+    '''
+    关注类型
+    '''
+    Value = 1,          # 值关注     s1.value in range[v11,v12] and|or s2.value in range[v21,v22]
+    Time = 3,           # 时间关注
+    Frenquency = 4,     # 频率关注
+    Activation = 5,     # 激活关注
+
+class Attention:
+    '''
+    关注内容对象
+    '''
+    def __init__(self,attentionType,expression):
+        '''
+        关注内容对象
+        :param attentionType:   AttentionType 关注类型
+        :param expression:      str           关注表达式
+        '''
+        self.attentionType = attentionType
+        self.expression = expression
+
+    def __str__(self):
+        return self.expression
+
+    def  __parse(self):
+        '''
+        解析关注表达式
+        :return:
+        '''
+        pass
+
+# 基本神经元计算模型（权重和加激活函数）
+class AttentionNeuronModel:
+    nameInfo = NameInfo('attention', cataory='attention')
+    __initStates = {}
+    __variables = [Variable(nameInfo='center',application='learn'),Variable(nameInfo='sigma',application='learn')]
+    def __init__(self,**configuration):
+        self.nameInfo = AttentionNeuronModel.nameInfo
+        self.configuration = configuration
+        self.initStates = AttentionNeuronModel.__initStates
+        self.variables = AttentionNeuronModel.__variables
+
+    def execute(self,neuron,net,activeno,clockinfo,**context):
+        '''
+        执行：对于没有输入的神经元，记录值为0，状态为未激活，返回0
+             对于输入不完全的神经元，不做记录，返回None
+             对于输入完全的神经元，记录计算值和激活状态，返回值
+        :param neuron:  Neuron 计算的神经元
+        :param net:     NeuralNetwork 网络
+        :param activeno float 激活编号
+        :param clockinfo tuple 时钟信息(上一个时钟，当前时钟，时间间隔)
+        :param context: 上下文（保留）
+        :return:
+        '''
+        # 取得时钟信息
+        lastclock, clock, clockstep = clockinfo
+
+        # 取得神经元的关注表达式对象
+        attentation = neuron.getVariableValue('attentation')
+
+        # 取得待计算突触的输入突触
+        synapses = net.getSynapses(toId=neuron.id)
+        if synapses is None or len(synapses)<=0:return None
+
+        # 检查输入突触是否有刺激到达
+        for i,synapse in enumerate(synapses):
+
+
+        # 检查突触是否都有值
+        if not collections.all(synapses,lambda s:'value' in s.states.keys()):
+            return None
+
+        # 取得突触所有输入值并求和(权重已经计算)
+        inputs = list(map(lambda s:s.states['value'],synapses))
+        sum = np.sum(inputs)
+
+        # 加偏置
+        sum += neuron['bias']
+
+        # 取得激活函数
+        activationFunctionConfig = neuron.modelConfiguration['activationFunction']
+        activationFunction = ActivationFunction.find(activationFunctionConfig.name)
+        if activationFunction is None:raise RuntimeError('神经元计算失败(CommonNeuronModel),激活函数无效:'+activationFunctionConfig.name)
+
+        # 组合出激活函数参数(参数可能是网络)
+        activationParamNames = activationFunction.getParamNames()
+        activationParams = {}
+        for name in activationParamNames:
+            if name in map(lambda v: v.nameInfo.name, neuron.variables): activationParams[name] = neuron[name]
+            elif name in activationFunctionConfig:activationParams[name] = activationFunctionConfig[name]
+
+        # 用输入和计算激活函数
+        value,activation = activationFunction.calculate(sum,activationParams) #?这里有问题，激活函数的参数无法传入
+
+        # 记录状态
+        neuron.states['value'] = value
+        neuron.states['activation'] = activation
+
+        return value

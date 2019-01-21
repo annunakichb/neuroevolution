@@ -9,7 +9,7 @@ from pygments.lexers import sql
 import utils.collections as collections
 import utils.files as files
 import utils.strs as strs
-from utils.strs import ExtendJsonEncoder
+from utils.collections import ExtendJsonEncoder
 
 
 __all__ = ['Monitor']

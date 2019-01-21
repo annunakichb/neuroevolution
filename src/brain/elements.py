@@ -6,9 +6,9 @@ from utils import collections as collections
 from utils.properties import Range
 import  brain.models as models
 
-__all__ = ['NueralElement','Neuron','Synapse']
+__all__ = ['NeuralElement', 'Neuron', 'Synapse']
 # 神经系统基本元素
-class NueralElement:
+class NeuralElement:
     def __init__(self,id,birth,modelConfiguration,coord=None):
         '''
         神经系统元素，神经元和突触的父类型
@@ -24,26 +24,39 @@ class NueralElement:
         self.states = {}
         self.variables = []
 
-        self.initModel()
+        self._initModel()
 
-    def initModel(self):
+    def _initModel(self):
         '''
         初始化计算模型：找到注册的计算模型，根据模型中的状态信息初始化神经系统元素状态，
         并将计算模型中登记的变量克隆一份在元素对象中（计算模型中本身的变量只是模版，并不在实际计算中使用，这样可以使得计算模型成为单体对象）
         :return:
         '''
+
+        # 根据模型配置取得模型对象
         if self.modelConfiguration is None: raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置无效')
         if not strs.isVaild(self.modelConfiguration.modelid): raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置中modelId无效')
         model = models.nervousModels.find(self.modelConfiguration.modelid)
         if model is None:raise RuntimeError('初始化计算模型失败(NueralElement.initModel):找不到模型:'+self.modelConfiguration.modelid)
-        self.states = {} if model.initStates is None else model.initStates
+        # 如果模型规定了要有初始状态，则设置初始状态
+        self.states = {} if model.initStates is None else copy.deepcopy(model.initStates)
+
+        # 拷贝模型中规定的所有变量，并初始号变量的值
         self.variables = copy.deepcopy(model.variables)
+        self._initVariableValue()
+
+    def _initVariableValue(self):
+        '''
+        根据模型配置初始号变量的值
+        :return:
+        '''
 
         if not collections.isEmpty(self.variables):
             for var in self.variables:
                 if var.nameInfo.name in self.modelConfiguration:
                     var.range = Range(self.modelConfiguration[var.nameInfo.name])
                     var.value = 0 if var.range is None else var.range.sample()
+
     def getModel(self):
         '''
         取得计算模型
@@ -56,7 +69,17 @@ class NueralElement:
         重置计算状态
         :return:
         '''
-        self.states = {}
+        model = self.getModel()
+        self.states = {} if model.initStates is None else copy.deepcopy(model.initStates)
+        self._initVariableValue()
+
+    def getVariable(self,name):
+        '''
+        取得变量
+        :param name: str 变量名
+        :return:
+        '''
+        return collections.first(self.variables, lambda var: var.nameInfo.hasName(name))
 
     def getVariableValue(self,name,default=0.0):
         '''
@@ -101,7 +124,7 @@ class NueralElement:
         #super(NueralElement,self).__setitem__(key,value)
 
 #神经元
-class Neuron(NueralElement):
+class Neuron(NeuralElement):
     def __init__(self,id,layer,birth,modelConfiguration,coord=None):
         '''
         神经元
@@ -128,7 +151,7 @@ class Neuron(NueralElement):
 
 
 #突触
-class Synapse(NueralElement):
+class Synapse(NeuralElement):
     def __init__(self,id,birth,fromId,toId,modelConfiguration,coord=None):
         '''
         连接突触
@@ -157,3 +180,19 @@ class Synapse(NueralElement):
                #+ (',' + stateStr if strs.isVaild(stateStr) else '') \
 
 
+class Module:
+    def __init__(self,id,birth,fromModuleIds,toModuleIds,neuronIds):
+        '''
+        神经模块
+        :param id:               Union(int,str)  模块id
+        :param birth:            float           创建时间
+        :param fromModuleIds:    list            上游模块Ids
+        :param toModuleIds:      list            下游模块Ids
+        :param neuronIds:        list            神经元Ids
+        '''
+        self.id = id
+        self.birth = birth
+        self.fromModuleIds = fromModuleIds
+        self.toModuleIds = toModuleIds
+        self.neuronIds = neuronIds
+        self.attributes = {}

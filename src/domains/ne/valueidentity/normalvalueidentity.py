@@ -437,9 +437,12 @@ if __name__ == '__main__':
     for i,value in enumerate(values):
         net.put(np.array([value]))
 
+    print("分裂次数=" + str(net.spiltcount) + ",重构次数=" + str(net.reconstructcount) + ",节点总数=" + str(
+        net.nodescount) + ",叶子节点数=" + str(len(net.leafs)))
+
     net.draw()
 
     net.drawdata()
 
-    print("分裂次数="+str(net.spiltcount)+",重构次数="+str(net.reconstructcount)+",节点总数="+str(net.nodescount)+",叶子节点数="+str(len(net.leafs)))
+
 

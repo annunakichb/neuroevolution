@@ -31,6 +31,7 @@ class DefaultIdGenerator:
         self.netid = 0
         self.neuronId = 0
         self.synapseId = 0
+        self.moduleId = 0
     def getNetworkId(self):
 
         self.netid += 1
@@ -41,9 +42,9 @@ class DefaultIdGenerator:
     def getSynapseId(self,net,fromId,toId):
         self.synapseId += 1
         return self.synapseId
-
-
-
+    def getModuleId(self,net):
+        self.moduleId += 1
+        return self.moduleId
 
 idGenerators = Registry()
 idGenerators.register(DefaultIdGenerator(),'default')
@@ -72,6 +73,7 @@ class NeuralNetwork:
         self.attributes = {}
         self.taskstat = {}
         self.taskTestResult = []
+        self.modules = []
 
     def __str__(self):
         ns = self.getNeurons()
@@ -535,10 +537,16 @@ class NeuralNetwork:
         对测试结果进行统计
         :return: None
         '''
+
         task = self.definition.runner.task
+        if task.test_y is None or len(task.test_y)<=0:
+            return
+
         testcount = correctcount = 0
         mae = mse = 0.0
         for index,result in enumerate(self.taskTestResult):
+            if task.test_y is None or len(task.test_y) <= index:
+                continue
             if collections.equals(self.taskTestResult[index],task.test_y[index]):
                 correctcount += 1
             else:

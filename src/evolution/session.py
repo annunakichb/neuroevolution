@@ -213,9 +213,9 @@ class EvolutionTask:
             session = Session(self.popParam,self.runParam,self,i,self.monitor)
             self.curSession = session
 
-            monitor = session.run()
-            monitor.command()
-
+            #self.monitor = session.run()
+            session.run()
+            #self.monitor.command()
             self.sessions.append(session)
 
         self.monitor.recordTaskEnd()

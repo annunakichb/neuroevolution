@@ -1,10 +1,8 @@
-from enum import Enum
-import json
+
 from .properties import *
 from .properties import Registry
-from utils import collections
 
-__all__ = ['FORMAT','isVaild','vaild','equals','getName','format','ExtendJsonEncoder']
+__all__ = ['FORMAT','isVaild','vaild','equals','getName','format']
 
 
 #region 性质判定
@@ -144,17 +142,3 @@ cmdRegistry = Registry()
 
 #endregion
 
-#region json扩展
-class ExtendJsonEncoder(json.JSONEncoder):
-    ignoreTypes = []
-    autostrTypes = []
-    def default(self, obj):
-        if isinstance(obj,Enum):
-            return str(obj)
-        if collections.any(ExtendJsonEncoder.ignoreTypes,lambda t:isinstance(obj,t)):
-            return None
-        if collections.any(ExtendJsonEncoder.autostrTypes,lambda t:isinstance(obj,t)):
-            return str(obj)
-        return json.JSONEncoder.default(self, obj)
-
-#endregion

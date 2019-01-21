@@ -16,12 +16,10 @@ from .crossmate import NeatCrossmateOperation
 from .species import NeatSpeciesMethod
 
 from ne.factory import DefaultNeuralNetworkGenomeFactory
+import ne
 
 def neat_init():
-
-    # 注册ne个体类型
-    neuralNetworkIndType = IndividualType('network', NeuralNetwork, DefaultNeuralNetworkGenomeFactory(), NeuralNetwork)
-    agent.individualTypes.register(neuralNetworkIndType, 'network')
+    ne.neuroevolution_init()
 
     # 注册id生成器对象
     networks.idGenerators.register(NeatIdGenerator(),'neat')

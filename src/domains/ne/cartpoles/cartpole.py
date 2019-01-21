@@ -1,139 +1,152 @@
-from math import cos, pi, sin
-import random
-import gizeh as gz
-import moviepy.editor as mpy
+"""
+Classic cart-pole system implemented by Rich Sutton et al.
+Copied from http://incompleteideas.net/sutton/book/code/pole.c
+permalink: https://perma.cc/C9ZM-652R
+"""
+import math
+import gym
+from gym import spaces, logger
+from gym.utils import seeding
+import numpy as np
 
-class SingleCartPole(object):
-    gravity = 9.8  # acceleration due to gravity, positive is downward, m/sec^2
-    mcart = 1.0  # cart mass in kg
-    mpole = 0.1  # pole mass in kg
-    lpole = 0.5  # half the pole length in meters
-    time_step = 0.01  # time step in seconds
+class CartPoleEnv(gym.Env):
+    metadata = {
+        'render.modes': ['human', 'rgb_array'],
+        'video.frames_per_second': 50
+    }
 
-    def __init__(self, x=None, theta=None, dx=None, dtheta=None,
-                 position_limit=2.4, angle_limit_radians=45 * pi / 180):
-        self.position_limit = position_limit
-        self.angle_limit_radians = angle_limit_radians
+    def __init__(self):
+        self.gravity = 9.8                                        # 重力单位
+        self.masscart = 1.0                                       # 小车质量 N
+        self.masspole = 0.1                                       # 杆子质量 N
+        self.total_mass = (self.masspole + self.masscart)
+        self.length = 0.5  # actually half the pole's length
+        self.polemass_length = (self.masspole * self.length)
+        self.force_mag = 30
+        self.tau = 0.02  # seconds between state updates
 
-        if x is None:
-            x = random.uniform(-0.5 * self.position_limit, 0.5 * self.position_limit)
+        # Angle at which to fail the episode
+        self.theta_threshold_radians = 45 * math.pi / 180
+        self.x_threshold = 2.4
+        self.x0 = 0.5
 
-        if theta is None:
-            theta = random.uniform(-0.5 * self.angle_limit_radians, 0.5 * self.angle_limit_radians)
+        self.force = 0
 
-        if dx is None:
-            dx = random.uniform(-1.0, 1.0)
+        # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
+        high = np.array([
+            self.x_threshold * 2,
+            np.finfo(np.float32).max,
+            self.theta_threshold_radians * 2,
+            np.finfo(np.float32).max])
 
-        if dtheta is None:
-            dtheta = random.uniform(-1.0, 1.0)
+        self.action_space = spaces.Discrete(2)
+        self.observation_space = spaces.Box(-high, high)
 
-        self.t = 0.0
-        self.x = x
-        self.theta = theta
+        self.seed()
+        self.viewer = None
+        self.state = None
 
-        self.dx = dx
-        self.dtheta = dtheta
+        self.steps_beyond_done = None
 
-        self.xacc = 0.0
-        self.tacc = 0.0
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
-    def step(self, force):
-        '''
-        Update the system state using leapfrog integration.
-            x_{i+1} = x_i + v_i * dt + 0.5 * a_i * dt^2
-            v_{i+1} = v_i + 0.5 * (a_i + a_{i+1}) * dt
-        '''
-        # Locals for readability.
-        g = self.gravity
-        mp = self.mpole
-        mc = self.mcart
-        mt = mp + mc
-        L = self.lpole
-        dt = self.time_step
+    def step(self, action, i):
+        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
+        state = self.state
+        x, x_dot, theta, theta_dot = state
+        # 力
+        force = self.force
 
-        # Remember acceleration from previous step.
-        tacc0 = self.tacc
-        xacc0 = self.xacc
+        costheta = math.cos(theta)
+        sintheta = math.sin(theta)
+        temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
+        # print(temp)
+        thetaacc = (self.gravity * sintheta - costheta * temp) / (
+                    self.length * (4.0 / 3.0 - self.masspole * costheta * costheta / self.total_mass))
+        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+        x = x + self.tau * x_dot
+        x_dot = x_dot + self.tau * xacc
+        theta = theta + self.tau * theta_dot
+        theta_dot = theta_dot + self.tau * thetaacc
+        self.state = (x, x_dot, theta, theta_dot)
+        done = x < -self.x_threshold \
+               or x > self.x_threshold \
+               or theta < -self.theta_threshold_radians \
+               or theta > self.theta_threshold_radians
+        done = bool(done)
+        reward = 0. if done else 1.
 
-        # Update position/angle.
-        self.x += dt * self.dx + 0.5 * xacc0 * dt ** 2
-        self.theta += dt * self.dtheta + 0.5 * tacc0 * dt ** 2
+        #print("状态"+str(self.state))
+        return np.array(self.state), reward, done, {}
 
-        # Compute new accelerations as given in "Correct equations for the dynamics of the cart-pole system"
-        # by Razvan V. Florian (http://florian.io).
-        # http://coneural.org/florian/papers/05_cart_pole.pdf
-        st = sin(self.theta)
-        ct = cos(self.theta)
-        tacc1 = (g * st + ct * (-force - mp * L * self.dtheta ** 2 * st) / mt) / (L * (4.0 / 3 - mp * ct ** 2 / mt))
-        xacc1 = (force + mp * L * (self.dtheta ** 2 * st - tacc1 * ct)) / mt
+    def reset(self):
+        self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        self.steps_beyond_done = None
+        return np.array(self.state)
 
-        # Update velocities.
-        self.dx += 0.5 * (xacc0 + xacc1) * dt
-        self.dtheta += 0.5 * (tacc0 + tacc1) * dt
+    def render(self, mode='human'):
+        screen_width = 600
+        screen_height = 400
 
-        # Remember current acceleration for next step.
-        self.tacc = tacc1
-        self.xacc = xacc1
-        self.t += dt
+        world_width = self.x_threshold * 2
+        scale = screen_width / world_width
+        carty = 100  # TOP OF CART
+        polewidth = 10.0
+        polelen = scale * 1.0
+        cartwidth = 50.0
+        cartheight = 30.0
 
-    def get_scaled_state(self):
-        '''Get full state, scaled into (approximately) [0, 1].'''
-        return [0.5 * (self.x + self.position_limit) / self.position_limit,
-                (self.dx + 0.75) / 1.5,
-                0.5 * (self.theta + self.angle_limit_radians) / self.angle_limit_radians,
-                (self.dtheta + 1.0) / 2.0]
+        if self.viewer is None:
+            from gym.envs.classic_control import rendering
+            self.viewer = rendering.Viewer(screen_width, screen_height)
+            l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
+            axleoffset = cartheight / 4.0
+            cart = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
+            self.carttrans = rendering.Transform()
+            cart.add_attr(self.carttrans)
+            self.viewer.add_geom(cart)
+            l, r, t, b = -polewidth / 2, polewidth / 2, polelen - polewidth / 2, -polewidth / 2
+            pole = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
+            pole.set_color(.8, .6, .4)
+            self.poletrans = rendering.Transform(translation=(0, axleoffset))
+            pole.add_attr(self.poletrans)
+            pole.add_attr(self.carttrans)
+            self.viewer.add_geom(pole)
+            self.axle = rendering.make_circle(polewidth / 2)
+            self.axle.add_attr(self.poletrans)
+            self.axle.add_attr(self.carttrans)
+            self.axle.set_color(.5, .5, .8)
+            self.viewer.add_geom(self.axle)
+            self.track = rendering.Line((0, carty), (screen_width, carty))
+            self.track.set_color(0, 0, 0)
+            self.viewer.add_geom(self.track)
 
+        if self.state is None: return None
 
+        x = self.state
+        cartx = x[0] * scale + screen_width / 2.0  # MIDDLE OF CART
+        self.carttrans.set_translation(cartx, carty)
+        self.poletrans.set_rotation(-x[2])
 
+        return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
-def continuous_actuator_force(action):
-    return -10.0 + 2.0 * action[0]
+    def close(self):
+        if self.viewer: self.viewer.close()
 
-
-def noisy_continuous_actuator_force(action):
-    a = action[0] + random.gauss(0, 0.2)
-    return 10.0 if a > 0.5 else -10.0
-
-
-def discrete_actuator_force(action):
-    return 10.0 if action[0] > 0.5 else -10.0
-
-
-def noisy_discrete_actuator_force(action):
-    a = action[0] + random.gauss(0, 0.2)
-    return 10.0 if a > 0.5 else -10.0
-
-
-def make_movie(net, output_filename,duration_seconds=60):
-    w, h = 300, 100
-    scale = 300 / 6
-
-    cart = gz.rectangle(scale * 0.5, scale * 0.25, xy=(150, 80), stroke_width=1, fill=(0, 1, 0))
-    pole = gz.rectangle(scale * 0.1, scale * 1.0, xy=(150, 55), stroke_width=1, fill=(1, 1, 0))
-
-    sim = SingleCartPole()
-
-    def make_frame(t):
-        inputs = sim.get_scaled_state()
-        net.definition.task.test_x = inputs
-        action = net.doTest()
-
-        sim.step(discrete_actuator_force(action))
-
-        surface = gz.Surface(w, h, bg_color=(1, 1, 1))
-
-        # Convert position to display units
-        visX = scale * sim.x
-
-        # Draw cart.
-        group = gz.Group((cart,)).translate((visX, 0))
-        group.draw(surface)
-
-        # Draw pole.
-        group = gz.Group((pole,)).translate((visX, 0)).rotate(sim.theta, center=(150 + visX, 80))
-        group.draw(surface)
-
-        return surface.get_npimage()
-
-    clip = mpy.VideoClip(make_frame, duration=duration_seconds)
-    clip.write_videofile(output_filename, codec="mpeg4", fps=50)
+# if __name__=="__main__":
+#     env=CartPoleEnv()
+#     for i in range(50):
+#         observation=env.reset()
+#         episode_reward = 0
+#         for j in range(200):
+#             env.render()
+#             action = np.random.choice([0, 1])  # 随机决定小车运动的方向
+#             observation, reward, done, info = env.step(action)  # 获取本次行动的反馈结果
+#             episode_reward += reward
+#             if done:
+#                 print('%d Episode finished after %f time steps / reward %d' % (i, j + 1, episode_reward))
+#                 #print('% Episode finished after %f time steps / mean %f' % (i, j + 1, last_time_steps.mean()))
+#                 #last_time_steps = np.hstack((last_time_steps[1:], [episode_reward]))  # 更新最近100场游戏的得分stack
+#                 break
