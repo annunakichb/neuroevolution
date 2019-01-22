@@ -163,7 +163,6 @@ class Monitor:
         self.__recordSection('session结束',结束原因=msg)
         if self.callback is not None: self.callback('session.end', self)
 
-
     def recordTaskBegin(self):
         self.__recordSection('任务开始')
         if self.callback is not None: self.callback('task.begin', self)

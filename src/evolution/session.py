@@ -105,6 +105,8 @@ class Session:
         #self.thread.start()
         self.loop()
 
+
+
     #endregion
 
     #region 进化过程

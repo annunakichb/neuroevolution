@@ -1,4 +1,4 @@
-import geopy
+
 import  logging
 import numpy as np
 from utils.coords import Coordination

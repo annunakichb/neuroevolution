@@ -1,7 +1,7 @@
 
 import utils.collections as collections
 from brain.viewer import NetworkView
-from evolution.viewer import EvolutionViewer
+#from evolution.viewer import EvolutionViewer
 
 
 __all__ = ['neat_callback']
@@ -18,7 +18,7 @@ def neat_callback(event,monitor):
         netviewer.drawNet(net,filename=filename + str(optimaInd.id) + '.svg', view=False)
         #collections.foreach(eliest,lambda ind : netviewer.drawNet(filename=filename+ind.id+'.svg',view=False))
 
-        evolutionView = EvolutionViewer()
-        evolutionView.drawSession(monitor,monitor.evoTask.curSession,'fitness')
+        #evolutionView = EvolutionViewer()
+        #evolutionView.drawSession(monitor,monitor.evoTask.curSession,'fitness')
 
     return True

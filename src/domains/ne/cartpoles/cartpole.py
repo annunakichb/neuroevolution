@@ -9,7 +9,7 @@ from gym import spaces, logger
 from gym.utils import seeding
 import numpy as np
 
-class CartPoleEnv(gym.Env):
+class SingleCartPoleEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 50
@@ -22,7 +22,7 @@ class CartPoleEnv(gym.Env):
         self.total_mass = (self.masspole + self.masscart)
         self.length = 0.5  # actually half the pole's length
         self.polemass_length = (self.masspole * self.length)
-        self.force_mag = 30
+        self.force_mag = 5
         self.tau = 0.02  # seconds between state updates
 
         # Angle at which to fail the episode
@@ -30,7 +30,7 @@ class CartPoleEnv(gym.Env):
         self.x_threshold = 2.4
         self.x0 = 0.5
 
-        self.force = 0
+        self.wind = 0
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
         high = np.array([
@@ -40,7 +40,7 @@ class CartPoleEnv(gym.Env):
             np.finfo(np.float32).max])
 
         self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(-high, high)
+        self.observation_space = spaces.Box(-high, high,dtype=np.float32)
 
         self.seed()
         self.viewer = None
@@ -57,7 +57,7 @@ class CartPoleEnv(gym.Env):
         state = self.state
         x, x_dot, theta, theta_dot = state
         # 力
-        force = self.force
+        force = self.wind + self.force_mag if action == 1 else -1.*self.force_mag + self.wind
 
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
@@ -79,6 +79,20 @@ class CartPoleEnv(gym.Env):
         reward = 0. if done else 1.
 
         #print("状态"+str(self.state))
+        '''
+        if not done:
+            reward = 1.0
+        elif self.steps_beyond_done is None:
+            # Pole just fell!
+            self.steps_beyond_done = 0
+            reward = 1.0
+        else:
+            if self.steps_beyond_done == 0:
+                logger.warn(
+                    "You are calling 'step()' even though this environment has already returned done = True. You should always call 'reset()' once you receive 'done = True' -- any further steps are undefined behavior.")
+            self.steps_beyond_done += 1
+            reward = 0.0
+        '''
         return np.array(self.state), reward, done, {}
 
     def reset(self):

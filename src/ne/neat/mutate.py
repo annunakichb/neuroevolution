@@ -191,9 +191,9 @@ class NeatMutate:
                 continue
 
             # f否则恢复原来的权重
-            for i,s in enumerate(synapses):
-                s['weight'] = old_weights[i]
-            for i,n in enumerate(neurons):
-                n['bias'] = old_bias[i]
+            for index,s in enumerate(synapses):
+                s['weight'] = old_weights[index]
+            for index,n in enumerate(neurons):
+                n['bias'] = old_bias[index]
 
         session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(last_fitness)+",diff="+str(last_fitness - origin_fitness))
