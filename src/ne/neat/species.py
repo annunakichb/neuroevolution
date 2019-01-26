@@ -20,8 +20,17 @@ class NeatSpeciesMethod:
         # 取得所有个体的特征向量
         idgenerator = networks.idGenerators.find(session.popParam.genomeDefinition.idGenerator)
         inds = session.pop.inds
-        indVecs = list(map(lambda ind:self.__getIndVector(ind,session),inds))
-        indArray = whiten(np.array(indVecs))
+        indVecs = np.array(list(map(lambda ind:self.__getIndVector(ind,session),inds)))
+        if indVecs.dtype is np.dtype('O'):
+            indVecs_new = []
+            for sn,indVec in enumerate(indVecs):
+                indVec1 = indVec.astype(np.float64)
+                indVecs_new.append(indVec1)
+                if np.array(indVecs_new).dtype is np.dtype('O'):
+                    if len(indVec1) > len(indVecs_new[0]):
+                        indVecs_new[-1] = indVec1[:len(indVecs_new[0])]
+            indVecs = np.array(indVecs_new)
+        indArray = whiten(indVecs)
         if alg == 'kmean':
             centroids,distortion = kmeans(obs=indArray,k_or_guess=n_clusters,iter=iter)
             labels = vq(indArray, centroids)
@@ -56,9 +65,20 @@ class NeatSpeciesMethod:
         sids = idgenerator.getAllCacheSynasesIds()
 
         # 取得每个神经元的偏置和每个突触的权重
-        nbiases = list(map(lambda nid:0 if net.getNeuron(nid) is None else net.getNeuron(nid).getVariableValue('bias',np.array([0.0])).tolist()[0],nids))
-        sweights = list(map(lambda sid:0 if net.getSynapse(id=sid) is None else net.getSynapse(id=sid)['weight'].tolist()[0],sids))
-        return nbiases + sweights
+        nbiases = []
+        for nid in nids:
+            if net.getNeuron(nid) is None:
+                nbiases.append(0.)
+            else:
+                nbiases.append(float(net.getNeuron(nid).getVariableValue('bias',np.array([0.0])).tolist()[0]))
+
+        sweights = []
+        for sid in sids:
+            if net.getSynapse(id=sid) is None:
+                sweights.append(0.)
+            else:
+                sweights.append(float(net.getSynapse(id=sid)['weight'].tolist()[0]))
+        return np.array(nbiases + sweights)
 
 
 

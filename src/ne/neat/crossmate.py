@@ -32,7 +32,7 @@ class NeatCrossmateOperation:
             net2 = session.pop[indpair[1]].getPhenome()
             idgenerator = networks.idGenerators.find(net1.definition.idGenerator)
             netid = idgenerator.getNetworkId()
-            net = net1.merge(net2,netid)
+            net = net1.merge(net2,netid,session.curTime)
 
             ind = Individual(net.id, session.curTime, net,session.pop.params.indTypeName,list(indpair),session.pop[indpair[0]].speciedId)
             session.pop.inds.append(ind)

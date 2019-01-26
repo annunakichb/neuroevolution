@@ -158,7 +158,6 @@ class Population:
                     value = evoluator.calacute(ind,session)
                     ind[key] = value
 
-
             # 计算所有个体评估值的平均，最大和最小
             max,avg,min,stdev = collections.rangefeature(list(map(lambda i:i[key],self.inds)))
             self[key] = {}

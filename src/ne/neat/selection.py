@@ -61,11 +61,7 @@ class NeatSelection():
         session.monitor.recordDebug('neat_selection','删除的个体',collections.mapreduce(removeIndids,reducefunc=lambda i,j:str(i)+','+str(j)))
 
         # 遍历所有物种，如果有物种个体数量为0，则将该物种删除
-        for i in range(len(species)):
-            specie = species[i]
-            if len(specie.indids) <= 0:
-                species.remove(specie)
-                i -= 1
+        species = [s for s in species if len(s.indids)>0]
         #endregion
 
         #region 第三步：对每个物种，随机选择需要交叉操作的个体

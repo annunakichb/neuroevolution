@@ -60,6 +60,8 @@ class NeuralNetwork:
     MAX_LAYER = 99999                                       #最大层，第一层是0层，因此总层数是该值+1
     MAX_RANGE = [(0,MAX_LAYER),(0,9999999),(0,99999)]      #最大坐标范围
 
+
+
     def __init__(self,id,definition):
         '''
         神经网络
@@ -75,6 +77,8 @@ class NeuralNetwork:
         self.taskTestResult = []
         self.modules = []
 
+
+
     def __str__(self):
         ns = self.getNeurons()
         sps = self.getSynapses()
@@ -82,7 +86,7 @@ class NeuralNetwork:
                  "(" + reduce(lambda x,y:x+","+y,map(lambda n:str(n),ns))+")"+\
                  "[" + reduce(lambda x,y:x+","+y,map(lambda s:str(s),sps))+"]"
 
-    def merge(self,net,newnetid):
+    def merge(self,net,newnetid,birth):
         '''
         合并两个网络，两个网络本身并不
         :param net:
@@ -95,19 +99,23 @@ class NeuralNetwork:
         for ns in self.neurons:
             for n in ns:
                 if newnet.getNeuron(n.id) is not None:continue
-                newnet.putneuron(n)
+                newnet.put(birth, n.coord, n.layer, n.modelConfiguration,n.id)
+                #newnet.putneuron(n)
         for ns in net.neurons:
             for n in ns:
                 if newnet.getNeuron(n.id) is not None: continue
-                newnet.putneuron(n)
+                newnet.put(birth, n.coord, n.layer, n.modelConfiguration,n.id)
+                #newnet.putneuron(n)
 
         for synapse in self.synapses:
             if newnet.getSynapse(id=synapse.id) is not None:continue
-            newnet._connectSynapse(synapse)
+            newnet.connect(synapse.fromId, synapse.toId, birth, synapse.modelConfiguration)
+            #newnet._connectSynapse(synapse)
 
         for synapse in net.synapses:
             if newnet.getSynapse(id=synapse.id) is not None:continue
-            newnet._connectSynapse(synapse)
+            newnet.connect(synapse.fromId, synapse.toId, birth, synapse.modelConfiguration)
+            #newnet._connectSynapse(synapse)
 
         return newnet
 
@@ -179,7 +187,13 @@ class NeuralNetwork:
         :return:
         '''
         if len(self.neurons) <= 2: return []
-        return reduce(lambda x,y:x.extend(y),self.neurons[1:-1])
+        r = []
+        nl = self.neurons[1:-1]
+        if len(nl) <= 0:return r
+        for ns in nl:
+            r.extend(ns)
+        return r
+        #return reduce(lambda x,y:x.extend(y),self.neurons[1:-1])
 
     def getNeurons(self,layer = -1,activation=None):
         '''
@@ -198,6 +212,14 @@ class NeuralNetwork:
         return collections.findall(r,lambda n:(layer<0 or n.layer == layer) and (r['activation']==activation))
 
 
+    def getHasVarNeurons(self,varname):
+        '''
+        取得拥有某个名称变量的所有神经元
+        :param varname:
+        :return:
+        '''
+        neurons = self.getNeurons()
+        return collections.findall(neurons,lambda n:n.getVariable(varname) is not None)
 
     def getLayerNeurons(self):
         '''取得分层神经元集合'''
@@ -329,12 +351,7 @@ class NeuralNetwork:
 
         collections.foreach(ns,lambda s : exec('ls[s.layer] = ls.get(s.layer,0)+1'))
         return ls
-
-
-
     #endregion
-
-
 
     #region 修改神经元或者突触
     def _connectSynapse(self,synapse):
@@ -403,7 +420,7 @@ class NeuralNetwork:
 
         # 检查神经元id
         if neuron.id <= 0:
-            idGenerator = self.definition.get('idGenerator', 'default')
+            idGenerator = idGenerators.find(self.definition.get('idGenerator', 'default'))
             if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")
             neuron.id = idGenerator.getNeuronId(self,neuron.coord)
 
@@ -444,13 +461,14 @@ class NeuralNetwork:
 
         return self
 
-    def put(self, birth, coord, layer, neuronModelConfig, inids=None, outinds=None, synapseModelConfig=None):
+    def put(self, birth, coord, layer, neuronModelConfig, id = None,inids=None, outinds=None, synapseModelConfig=None):
         '''
         添加神经元
         :param birth:                int or float 添加时间，必须
         :param coord:                Coordinate   坐标，可选
         :param layer:                int          层，必须
         :param neuronModelConfig:    dict 神经计算模型配置，必须
+        :param id                    int  神经元id,可选,如果无效,会尝试生成一个,但是要求coord有效
         :param inids:                int or list，输入神经元id
         :param outinds:              int or list，输入神经元id
         :param synapseModelConfig:   dict，突触计算模型配置
@@ -459,10 +477,12 @@ class NeuralNetwork:
         if birth < 0:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):birth无效')
         if layer < 0:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):layer无效')
         if neuronModelConfig is None:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):neuronModelConfig无效')
-        idGenerator = self.definition.get('idGenerator', 'default')
+        idGenerator = idGenerators.find(self.definition.get('idGenerator', 'default'))
         if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")
 
-        n = Neuron(idGenerator.getNeuronId(self,coord),layer,birth,neuronModelConfig,coord)
+        if id is None:
+            id = idGenerator.getNeuronId(self,coord,None)
+        n = Neuron(id,layer,birth,neuronModelConfig,coord)
         return self.putneuron(n,inids,outinds,synapseModelConfig)
 
 
@@ -507,6 +527,10 @@ class NeuralNetwork:
         task = self.definition.runner.task
         runner.doLearn(self,task)
         return task
+
+    def activate(self,inpputs):
+        runner = self.getRunner()
+        return runner.activate(self,inpputs)
 
     def doTest(self):
         runner = self.getRunner()

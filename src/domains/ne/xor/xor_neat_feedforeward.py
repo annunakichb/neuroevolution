@@ -95,12 +95,12 @@ def run():
     # 定于运行参数
     runParam = {
         'terminated' : {
-            'maxIterCount' : 300,                                # 最大迭代次数，必须
-            'maxFitness' : 3.95,                                   # 最大适应度，必须
+            'maxIterCount' : 50,                                # 最大迭代次数，必须
+            'maxFitness' : 4.00,                                   # 最大适应度，必须
         },
         'log':{
             'individual' : 'elite',                               # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
-            'debug': False                                         # 是否输出调试信息
+            'debug': True                                         # 是否输出调试信息
         },
         'evalate':{
             'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选

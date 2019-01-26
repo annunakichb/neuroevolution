@@ -60,7 +60,7 @@ class NeatMutate:
                              session.runParam.mutate.topo.deletenode, session.runParam.mutate.topo.deleteconnection]
         operationfuncs = [self.__do_mutate_addnode,self.__do_mutate_addconnection,self.__do_mutate_deletenode,self.__do_mutate_deleteconnection]
 
-        np.random.seed(0)
+        #np.random.seed(0)
         retryCount = 0
         while 1:
             p = np.array(topoopertionrates)
@@ -157,8 +157,9 @@ class NeatMutate:
     def __doWeightTrain(self,ind,session):
         net = ind.genome
         synapses = net.getSynapses()
-        neurons = net.getHiddenNeurons()
+        neurons = net.getHasVarNeurons('bias')
 
+        #print('权重修正前:',str(ind))
         range1 = Range(net.definition.models.synapse.weight)
         range2 = Range(net.definition.models.hidden.bias)
         epoch = session.runParam.mutate.weight.epoch
@@ -185,9 +186,10 @@ class NeatMutate:
             #权重改变后再次对网络计算适应度
             new_fitness = evoluator.calacute(ind, session)
             # 改变后测试误差更小
-            if new_fitness > old_fitness:
+            if new_fitness >= old_fitness:
                 old_fitness = new_fitness
                 last_fitness = new_fitness
+                ind['fitness'] = new_fitness
                 continue
 
             # f否则恢复原来的权重
@@ -196,4 +198,5 @@ class NeatMutate:
             for index,n in enumerate(neurons):
                 n['bias'] = old_bias[index]
 
+        #print('权重修正后:', str(ind))
         session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(last_fitness)+",diff="+str(last_fitness - origin_fitness))

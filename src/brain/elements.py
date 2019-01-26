@@ -42,7 +42,7 @@ class NeuralElement:
         self.states = {} if model.initStates is None else copy.deepcopy(model.initStates)
 
         # 拷贝模型中规定的所有变量，并初始号变量的值
-        self.variables = copy.deepcopy(model.variables)
+        self.variables = [var.clone() for var in model.variables]
         self._initVariableValue()
 
     def _initVariableValue(self):
@@ -64,14 +64,15 @@ class NeuralElement:
         '''
         return models.nervousModels.find(self.modelConfiguration.modelid)
 
-    def reset(self):
+    def reset(self,resetvar=False):
         '''
         重置计算状态
         :return:
         '''
         model = self.getModel()
         self.states = {} if model.initStates is None else copy.deepcopy(model.initStates)
-        self._initVariableValue()
+        if resetvar:
+            self._initVariableValue()
 
     def getVariable(self,name):
         '''

@@ -1,6 +1,6 @@
-from domains.ne.cartpoles.cartpole import SingleCartPoleEnv
-import domains.ne.cartpoles.cartpole as cartpole
+import matplotlib.pyplot as plt
 
+from domains.ne.cartpoles.enviornment.cartpole import SingleCartPoleEnv
 import ne.callbacks as callbacks
 import ne.neat as neat
 from brain.networks import NetworkType
@@ -8,112 +8,59 @@ from brain.networks import NeuralNetwork
 from brain.runner import NeuralNetworkTask
 from evolution.env import Evaluator
 from evolution.session import EvolutionTask
-from utils.properties import Properties
 
-from domains.ne.cartpoles.force import  *
+import domains.ne.cartpoles.enviornment.force as force
+import domains.ne.cartpoles.enviornment.runner as runner
 
-'''
-force_inc_generator = ForceIncGenerator(0,1,force_step = 1)
-force_normal_generator = ForceNormalGenerator(9,2,force_init_sigma = 0.01,force_sigma_step = 0.05)
-linearGenerator = LinearGenerator(0,3)
-cycleGenerator = CycleGenerator(0,4,time_step=0.02,wind_range=24.0)
-complex_generation = 0
-'''
+env = SingleCartPoleEnv()
 
 
-force_generator = ForceGenerator(15,0.5,0.0,0.01)
-# 适应度计算函数:以累计奖励作为适应度
 def fitness(ind,session):
-    net = ind.getPhenome()
-
-    fitnesses = []
-    runs_per_net = 10
-    env = SingleCartPoleEnv()
-
-    episode_reward = 0  # 累计奖励
-    observation = env.reset()
-
-    global complex_generation
-    for runs in range(runs_per_net):
-        # 网络执行
-        net.definition.runner.task.test_x = [observation]
-        action = net.doTest()
-        action = 1 if action[0] > 0.5 else 0
-        env.wind = force_generator.next(runs*0.02)
-        observation_, reward, done, info = env.step(action, runs)
-
-        # x是车的水平位移，theta是杆离垂直的角度
-        x, x_dot, theta, theta_dot = observation_
-
-        # 计算奖励
-        reward = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
-        episode_reward += reward
-
-
-    return episode_reward / runs_per_net
-
-
-def fitness2(ind,session):
     '''
     以连续不倒的次数作为适应度
     :param ind:
     :param session:
     :return:
     '''
-    env = SingleCartPoleEnv()
+
     net = ind.getPhenome()
+    reward_list, notdone_count_list = runner.do_evaluation(3,env,net.activate)
 
-    done_count = 0  # 表示连续维持成功(done)的最大次数
-    cur_max_done = 100  # 当前最大连续不倒次数
+    return min(notdone_count_list)
 
-    episode_reward = 0  # 累计奖励
-    observation = env.reset()
-
-    global complex_generation
-
-    step = 0
-    while True:
-        # 网络执行
-        net.definition.runner.task.test_x = [observation]
-        env.wind = force_generator.next(step * 0.02)
-        action = net.doTest()
-        action = 1 if action[0] > 0.5 else 0
-        observation_, reward, done, info = env.step(action, step)
-
-        # x是车的水平位移，theta是杆离垂直的角度
-        x, x_dot, theta, theta_dot = observation_
-
-        # 计算奖励
-        reward = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
-        episode_reward += reward
-
-        if done:
-            return done_count
-        done_count += 1
-
-        if done_count >= cur_max_done: # 连续不倒下次数最大是30
-            return done_count
-
-        step += 1
-
+fitness_records = []
+complex_records=[]
+epochcount = 0
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
     callbacks.neat_callback(event,monitor)
-    global complex_generation
-
+    global epochcount
     if event == 'epoch.end':
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
-        if maxfitness >= 100:
-            changed, maxcomplex, k,w, f, sigma = force_generator.promptComplex()
+        # 如果最大适应度达到了env.max_notdone_count（说明对当前环境已经产生适应），或者进化迭代数超过100次（当前环境下适应达到最大）
+        # 则提升复杂度
+        epochcount += 1
+        if maxfitness >= env.max_notdone_count or epochcount >= 30:
+            fitness_records.append(maxfitness)
+            complex_records.append(force.force_generator.currentComplex())
+            print([(f, c) for f, c in zip(complex_records, fitness_records)])
+
+            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(10.0)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
             else:
-                print('环境复杂度没有变化')
+                #plt.plot(complex_records, reward_list, label='reward')
+                plt.plot(complex_records, fitness_records, label='times')
+                plt.xlabel('complexes')
+                plt.savefig('./neat_cartpole.png')
+
+            epochcount = 0
+
 
     elif event == 'session.end':
         filename = 'singlecartpole.session.'+ str(monitor.evoTask.curSession.taskxh)+'.mov'
         eliest = monitor.evoTask.curSession.pop.eliest
-        cartpole.make_movie(eliest[0].getPhenome(),filename)
+        #cartpole.make_movie(eliest[0].getPhenome(),filename)
 
 def run():
     # 初始化neat算法模块
@@ -181,7 +128,7 @@ def run():
             'iter':50,                                            # 算法迭代次数
         },
         'features':{                                              # 特征评估函数配置，必须
-            'fitness' : Evaluator('fitness',[(fitness2,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
+            'fitness' : Evaluator('fitness',[(fitness,1.0)])      # 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
     }
 
@@ -189,8 +136,8 @@ def run():
     # 定于运行参数
     runParam = {
         'terminated' : {
-            'maxIterCount' : 100,                                 # 最大迭代次数，必须
-            'maxFitness' : 1000,                                   # 最大适应度，必须
+            'maxIterCount' : 100000,                               # 最大迭代次数，必须
+            'maxFitness' : 1000000.,                                   # 最大适应度，必须
         },
         'log':{
             'individual' : 'elite',                                 # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom

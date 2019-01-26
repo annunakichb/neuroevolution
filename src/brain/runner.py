@@ -77,6 +77,7 @@ class SimpleNeuralNetworkRunner:
         '''
         pass
 
+
     def doTest(self,net,task):
         '''
         执行测试
@@ -88,50 +89,62 @@ class SimpleNeuralNetworkRunner:
         inputNeurons = net.getInputNeurons()
         #对每一个输入样本
         for index,value in enumerate(task.test_x):
-            # 重置神经元和突触状态
-            collections.foreach(net.getNeurons(),lambda n:n.reset())
-            collections.foreach(net.getSynapses(),lambda s:s.reset())
-
-            # 设置输入
-            for d,v in enumerate(value):
-                if d >= len(inputNeurons):break
-                model = models.nervousModels.find(inputNeurons[d].modelConfiguration.modelid)
-                model.execute(inputNeurons[d],net,value=v)
-
-                s = net.getOutputSynapse(inputNeurons[d].id)
-                if collections.isEmpty(s):continue
-
-                collections.foreach(s,lambda x:x.getModel().execute(x,net))
-
-            # 反复执行
-            ns = net.getNeurons()
-            neuronCount = net.getNeuronCount()
-            iterCount = 0
-            outputNeurons = net.getOutputNeurons()
-            while not collections.all(outputNeurons,lambda n:'value' in n.states.keys()) and iterCount<=neuronCount:
-                iterCount += 1
-                uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.states.keys())
-                if collections.isEmpty(uncomputeNeurons):break
-                for n in uncomputeNeurons:
-                    model = n.getModel()
-                    synapses = net.getInputSynapse(n.id)
-                    if collections.isEmpty(synapses):continue
-                    if not collections.all(synapses,lambda s:'value' in s.states.keys()):continue
-                    model.execute(n,net)
-
-                    synapses = net.getOutputSynapse(n.id)
-                    if collections.isEmpty(synapses):continue
-                    collections.foreach(synapses,lambda s:s.getModel().execute(s,net))
-
-            # 将没结果的输出神经元的值设置为0
-            outputNeuronsWithNoResult = collections.findall(outputNeurons,lambda n:'value' not in n.states.keys())
-            if not collections.isEmpty(outputNeuronsWithNoResult):
-                collections.foreach(outputNeuronsWithNoResult,lambda n:exec("n['value']=0"))
-            # 取得结果
-            outputs = list(map(lambda n:n['value'],outputNeurons))
-            if len(outputs) == 1:outputs = outputs[0]
+            outputs = self.activate(net,value)
             net.setTestResult(index,outputs)
 
+    def activate(self,net,inputs):
+        '''
+        激活网络
+        :param net:  测试网络
+        :param task: 测试任务
+        :return: outputs
+        '''
+        # 取得输入
+        inputNeurons = net.getInputNeurons()
+
+        # 重置神经元和突触状态
+        collections.foreach(net.getNeurons(),lambda n:n.reset())
+        collections.foreach(net.getSynapses(),lambda s:s.reset())
+
+        # 设置输入
+        for d,v in enumerate(inputs):
+            if d >= len(inputNeurons):break
+            model = models.nervousModels.find(inputNeurons[d].modelConfiguration.modelid)
+            model.execute(inputNeurons[d],net,value=v)
+
+            s = net.getOutputSynapse(inputNeurons[d].id)
+            if collections.isEmpty(s):continue
+
+            collections.foreach(s,lambda x:x.getModel().execute(x,net))
+
+        # 反复执行
+        ns = net.getNeurons()
+        neuronCount = net.getNeuronCount()
+        iterCount = 0
+        outputNeurons = net.getOutputNeurons()
+        while not collections.all(outputNeurons,lambda n:'value' in n.states.keys()) and iterCount<=neuronCount:
+            iterCount += 1
+            uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.states.keys())
+            if collections.isEmpty(uncomputeNeurons):break
+            for n in uncomputeNeurons:
+                model = n.getModel()
+                synapses = net.getInputSynapse(n.id)
+                if collections.isEmpty(synapses):continue
+                if not collections.all(synapses,lambda s:'value' in s.states.keys()):continue
+                model.execute(n,net)
+
+                synapses = net.getOutputSynapse(n.id)
+                if collections.isEmpty(synapses):continue
+                collections.foreach(synapses,lambda s:s.getModel().execute(s,net))
+
+        # 将没结果的输出神经元的值设置为0
+        outputNeuronsWithNoResult = collections.findall(outputNeurons,lambda n:'value' not in n.states.keys())
+        if not collections.isEmpty(outputNeuronsWithNoResult):
+            collections.foreach(outputNeuronsWithNoResult,lambda n:exec("n['value']=0"))
+        # 取得结果
+        outputs = list(map(lambda n:n['value'],outputNeurons))
+        if len(outputs) == 1:outputs = outputs[0]
+        return outputs
 
 
 # 基于tf的神经网络运行器

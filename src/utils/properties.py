@@ -2,11 +2,12 @@ import numpy as np
 from functools import reduce
 import re
 from utils import strs
-
+import copy
 __all__ = ['NameInfo','Range','PropertyInfo','Variable','Properties']
 
 class NameInfo:
     __slots__ = ['name','caption','description','cataory','alias']
+
 
     def __init__(self,name,caption='',description='',cataory='',*alias):
         '''
@@ -66,15 +67,19 @@ class NameInfo:
         '''
         return self.name + '' if not strs.isVaild(self.description) else '(' + self.description + ')'
 
-
+    def clone(self):
+        return NameInfo(self.name,self.caption,self.description,self.caption,[].extend(self.alias))
 class Range:
     regax = '(\S*)'  + '(\[|\(){1}' + '((\+|-)?\d+(\.\d+)?){1}'+ '\:' + '((\+|-)?\d+(\.\d+)?){1}' + '(\:((\+|-)?\d+(\.\d+)?))?' + '(\]|\)){1}'
     pattern = re.compile(regax)
+
     def __init__(self,range):
         '''
         值范围
         :param range: str，格式如[0:1] (0:1) [0:1:0.1] (0:1:0.1) uniform[0:1] normal[0,1]，其中[]与()为数值区间
         '''
+        self.rangeStr = range
+
         self.distributionName = 'uniform'
         self.begin = 0
         self.includeBegin = True
@@ -105,9 +110,11 @@ class Range:
             return np.random.normal(self.begin,self.end,size)
         return None
 
-
+    def clone(self):
+        return Range(self.rangeStr)
 
 class PropertyInfo:
+
     def __init__(self,xh,name,type,default,storeformats={},range = None,getter=None,setter=None,**props):
         '''
         属性信息，描述一个对象的属性字段
@@ -130,8 +137,11 @@ class PropertyInfo:
         self.setter = setter
         self.storeformats = storeformats
         self.props = props if props is not None else {}
+    def clone(self):
+        return PropertyInfo(self.xh,self.nameInfo,self.type,self.default,self.storeformats,self.range,self.getter,self.setter,**self.props)
 
 class Variable(PropertyInfo):
+
     def __init__(self,nameInfo,type=float,default=0.0,xh=1,value=None,storeformats={},range = None,getter=None,setter=None,**props):
         '''
         变量,参数意义参见PropertyInfo
@@ -155,6 +165,10 @@ class Variable(PropertyInfo):
     def __repr__(self):
         if self.value is None:return ''
         return self.nameInfo.name + '=' + format(self.value)
+
+    def clone(self):
+        return Variable(self.nameInfo.clone(),self.type,self.default,self.xh,np.array(0),self.storeformats, \
+                        None if self.range is None else self.range.clone(),self.getter,self.setter,**copy.deepcopy(self.props))
 
 # 注册表对象
 class Registry:

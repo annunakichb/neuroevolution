@@ -1,16 +1,18 @@
 import numpy as np
+import os
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
+
 class ForceGenerator():
-    K_MIN = -50.
+    K_MIN = 0.
     K_MAX = 50.
-    K_STEP = 0.5
+    K_STEP = 0.05
     OMEGE_MIN = -1.0
     OMEGE_MAX = 1.0
-    OMEGE_STEP = 0.05
+    OMEGE_STEP = 0.01
     SIGMA_MIN = 0.01
     SIGMA_MAX = 1.
     SIGMA_STEP = 0.1
@@ -47,30 +49,49 @@ class ForceGenerator():
         :param actions:
         :return:
         '''
-        wind = self.k * np.sin(self.w*t + self.f) + np.random.normal(0,self.sigma)
+        wind = self.k * np.sin(self.w*t + self.f)
+        if self.sigma > 0:
+            wind += np.random.normal(0,self.sigma)
         if actions is None or not self.action_vaild or self.action_func is None:
             return wind
         return self.action_func(actions)
     #endregion
 
+
     #region 复杂度计算相关
-    def promptComplex(self):
+    def promptComplex(self, min_up=0.):
+        '''
+        提升复杂度
+        :param min_up: float 复杂度提升的最小幅度
+        :return:
+        '''
+        curComplex = self.currentComplex()
+        if min_up <= 0.:
+            return self._promptComplex()
+        while True:
+            changed, newcomplex, k, w, f, sigma = self._promptComplex()
+            if not changed or newcomplex - curComplex >= min_up:
+                return changed, newcomplex, k, w, f, sigma
+
+    def _promptComplex(self):
         '''
         按照梯度提升复杂度
         :return:
         '''
-        ks = [self.k - ForceGenerator.K_STEP,self.k,self.k + ForceGenerator.K_STEP]
-        ws = [self.w - ForceGenerator.OMEGE_STEP,self.w,self.w + ForceGenerator.OMEGE_STEP]
         maxk,maxw = self.k,self.w
         maxcomplex = self.find_complex(self.k,self.w,self.f,self.sigma)
         changed = False
 
         count = 1
-        while not changed and count < 3:
-            ks = np.arange(self.k - ForceGenerator.K_STEP * count, self.k + ForceGenerator.K_STEP * (count + 1),
+        while not changed and count < 100:
+            ks = np.arange(self.k - ForceGenerator.K_STEP * count, self.k + ForceGenerator.K_STEP * (count+1),
                            ForceGenerator.K_STEP)
-            ws = np.arange(self.w - ForceGenerator.OMEGE_STEP * count, self.w + ForceGenerator.OMEGE_STEP * (count + 1),
+            ks[ks < ForceGenerator.K_MIN] = ForceGenerator.K_MIN
+            ks[ks > ForceGenerator.K_MAX] = ForceGenerator.K_MAX
+            ws = np.arange(self.w - ForceGenerator.OMEGE_STEP * count, self.w + ForceGenerator.OMEGE_STEP * (count+1),
                            ForceGenerator.OMEGE_STEP)
+            ws[ws < ForceGenerator.OMEGE_MIN] = ForceGenerator.OMEGE_MIN
+            ws[ws > ForceGenerator.OMEGE_MAX] = ForceGenerator.OMEGE_MAX
 
             for k in ks:
                 for w in ws:
@@ -96,15 +117,24 @@ class ForceGenerator():
         :param statcount:     计算次数，返回结果是多次平均
         :return:
         '''
+
+        complexfilename = os.path.split(os.path.realpath(__file__))[0] + '\\complex.npz'
+        if os.path.exists(complexfilename):
+            d = np.load(complexfilename)
+            K,W,C = d['arr_0'],d['arr_1'],d['arr_2']
+            return K,W,C
         print('准备复杂度计算,这可能会花费数分钟...')
         k = np.arange(ForceGenerator.K_MIN, ForceGenerator.K_MAX, ForceGenerator.K_STEP)
         w = np.arange(ForceGenerator.OMEGE_MIN, ForceGenerator.OMEGE_MAX, ForceGenerator.OMEGE_STEP)
         s = np.arange(ForceGenerator.SIGMA_MIN, ForceGenerator.SIGMA_MAX, ForceGenerator.SIGMA_STEP)
+        sigma = s[0]
 
         K, W = np.meshgrid(k, w)
-        C = [[self.compute_complex(k, w, np.pi / 2 if w == 0 else 0., self.sigma) for k, w in zip(ks, ws)] for ks, ws in
+        C = [[self.compute_complex(k, w, np.pi / 2 if w == 0 else 0., sigma) for k, w in zip(ks, ws)] for ks, ws in
              zip(K, W)]
         C = np.array(C)
+
+        np.savez(complexfilename, K, W, C)
         return K,W,C
 
     def draw_complex(self):
@@ -118,6 +148,13 @@ class ForceGenerator():
                                linewidth=0, antialiased=False)
         fig.colorbar(surf, shrink=0.5, aspect=5)
         plt.show()
+
+    def currentComplex(self):
+        '''
+        当前复杂度
+        :return:
+        '''
+        return self.find_complex(self.k,self.w,self.f,self.sigma)
 
     def find_complex(self,k,w,f,sigma):
         '''
@@ -134,10 +171,16 @@ class ForceGenerator():
             if np.abs(ws[0] - w) < min_error:
                 windex = index
                 break
-        kindex = np.argwhere(np.abs(self.K[0]-k)<min_error)
+        kindex = -1
+        for index,ks in enumerate(self.K[0]):
+            if np.abs(ks - k) < min_error:
+                kindex = index
+                break
+        #kindex = np.argwhere(np.abs(self.K[0]-k)<min_error)
         if windex == -1 or kindex == -1:
             return None
         return self.C[windex][kindex]
+
     def compute_complex(self,k,w,f,sigma,t_min=0.,t_max=2.,t_step=0.02,count=2):
         '''
         给定一组参数（k,w,f,sigma）计算复杂度
@@ -260,152 +303,12 @@ class ForceGenerator():
         pass
     #endregion
 
-class ForceGenerator2():
-    def __init__(self,initforce,force_change_mode,**kwargs):
-        '''
-        外力生成器
-        :param initforce:          float 初始力
-        :param force_change_mode:  int 力变化的模式  1 是力递增 2 initforce是在以均值的高斯采样,初始方差和方差递增在kwargs中定义
-        :param kwargs:
-        '''
-        self.initforce = initforce
-        self.forcechangemode = force_change_mode
-        self.params = kwargs
-        self.curforce = None
-        self.curGeneration = None
-        self.t = None
-
-    def reset(self):
-        self.curforce = None
-        self.curGeneration = None
-        self.t = None
-
-    def complex(self,generation,count=100,total=1,sectionunit=1):
-        complexs = []
-        for i in range(total):
-            samples = []
-            for j in range(count):
-                samples.append(self.next(generation))
-            samples = [round(x,sectionunit) for x in samples]
-
-            samples = np.array(samples)
-            keys = np.unique(samples)
-            stat = {}
-            for k in keys:
-                mask = (samples == k)
-                arr_new = samples[mask]
-                v = arr_new.size
-                stat[k] = v
-            entropy = 0.
-            for key,value in stat.items():
-                p = value / len(samples)
-                entropy += p * np.log(p)
-            entropy = -1 * entropy * samples.var()
-            complexs.append(entropy)
-        return np.average(np.array(complexs))
-
-class ForceIncGenerator(ForceGenerator):
-    def __init__(self,initforce,force_change_mode,**kwargs):
-        '''
-        递增(减)外力生成器
-        :param initforce:
-        :param force_change_mode:
-        :param kwargs:
-        '''
-        super(ForceIncGenerator, self).__init__(initforce,force_change_mode,**kwargs)
-
-    def next(self,generation):
-        '''
-        下一个外力
-        :param generation: 年代
-        :return:  同一个年代的外力不变,年代递增,外力随之递增
-        '''
-        if self.curforce is None:
-            self.curforce = self.initforce
-            self.curGeneration = generation
-            return self.curforce
-        if self.curGeneration == generation:
-            return self.curforce
-
-        self.curforce += self.params['force_step']
-        self.curGeneration = generation
-        return self.curforce
-
-
-class ForceNormalGenerator(ForceGenerator):
-    def __init__(self, initforce, force_change_mode, **kwargs):
-        super(ForceNormalGenerator, self).__init__(initforce, force_change_mode, **kwargs)
-
-    def next(self, generation):
-        if self.curforce is None:
-            self.curforce = np.random.normal(self.initforce,self.params['force_init_sigma'])
-            self.curGeneration = generation
-            return self.curforce
-        if self.curGeneration == generation:
-            self.curforce = np.random.normal(self.initforce, self.params['force_init_sigma'])
-            return self.curforce
-
-        self.params['force_init_sigma'] = self.params['force_init_sigma'] + self.params['force_sigma_step']
-        self.curforce = np.random.normal(self.initforce, self.params['force_init_sigma'])
-        return self.curforce
-        self.curGeneration = generation
-        return self.curforce
-
-class LinearGenerator(ForceGenerator):
-    def __init__(self, initforce, force_change_mode, **kwargs):
-        '''
-        风力线性增长
-        :param initforce:
-        :param force_change_mode:
-        :param kwargs:
-        '''
-        super(LinearGenerator, self).__init__(initforce, force_change_mode, **kwargs)
-
-    def next(self, generation):
-        if self.curforce is None:
-            self.curforce = self.initforce
-            return self.curforce
-        self.curforce += (generation+1) * 0.1
-        return self.curforce
-
-class CycleGenerator(ForceGenerator):
-    def __init__(self, initforce, force_change_mode, **kwargs):
-        '''
-        风力周期性变化
-        :param initforce:
-        :param force_change_mode:
-        :param kwargs:
-        '''
-        super(CycleGenerator, self).__init__(initforce, force_change_mode, **kwargs)
-
-    def next(self, generation):
-        time_step = self.params.get('time_step',0.02)
-        wind_range = self.params.get('wind_range',12.0)
-        if self.t is None:
-            self.t = 0.
-        else:
-            self.t += time_step
-
-        self.curforce = wind_range * np.sin(generation * self.t)
-        return self.curforce
+force_generator = ForceGenerator(0.0,0.0,0.0,0.01)
 
 if __name__ == '__main__':
-    generator = ForceGenerator(0,0,0,0)
-    generator.draw_complex()
-    '''
-    normalGenerator = ForceNormalGenerator(6,2,force_init_sigma=0.01,force_sigma_step=0.01)
-    print('正态分布风力复杂度')
-    for i in range(30):
-        print('第%d代复杂度%.5f' % (i,normalGenerator.complex(i)))
+    changed, maxcomplex, k, w, f, sigma = force_generator.promptComplex(5.0)
+    print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k, w, f, sigma))
 
-    linearGenerator = LinearGenerator(0,3)
-    print('线性增长风力复杂度')
-    for i in range(5):
-        print('第%d代复杂度%.5f' % (i+1,linearGenerator.complex(i+1)))
-
-    cycleGenerator = CycleGenerator(0,4,time_step=1.0,wind_range=12.0)
-    print('周期风力复杂度')
-    for i in range(5):
-        print('第%d代复杂度%.5f' % (i+1,cycleGenerator.complex(i+1)))
-    '''
+    #generator = ForceGenerator(0,0,0,0)
+    force_generator.draw_complex()
 
