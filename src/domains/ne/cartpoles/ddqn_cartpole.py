@@ -8,12 +8,12 @@ import time
 import matplotlib.pyplot as plt
 from domains.ne.cartpoles.enviornment.cartpole import SingleCartPoleEnv
 from domains.ne.cartpoles.enviornment import force
-from rl.dqn import  DeepQNetwork
+from rl.ddqn import  DDeepQNetwork
 
 import domains.ne.cartpoles.enviornment.runner as runner
 
 env = SingleCartPoleEnv().unwrapped
-RL = DeepQNetwork(n_actions=env.action_space.n,
+RL = DDeepQNetwork(n_actions=env.action_space.n,
                   n_features=env.observation_space.shape[0])
 
 def _do_learn(observation,action,reward,observation_,step,totalreward,total_step):
@@ -39,9 +39,9 @@ def train():
             reward_list.append(np.average(episode_reward_list))
             notdone_count_list.append(np.average(episode_notdone_count_list))
             steps.append(total_step)
-            np.save('dqn_result.npz', (complexes, notdone_count_list, reward_list,steps))
+            np.save('ddqn_result.npy', (complexes, notdone_count_list, reward_list,steps))
 
-            episode_notdone_count_list,episode_reward_list = [],[],
+            episode_notdone_count_list,episode_reward_list = [],[]
             total_step = 0
 
             print('复杂度:', complexes)
@@ -64,12 +64,12 @@ def train():
             if len(episode_notdone_count_list) > 10:
                 episode_notdone_count_list = episode_notdone_count_list[-10:]
 
-    #np.save('dqn_result.npz', complexes, notdone_count_list,reward_list)
+    #np.save('ddqn_result.npz', complexes, notdone_count_list, reward_list)
     RL.save()
     plt.plot(complexes, reward_list, label='reward')
     plt.plot(complexes, notdone_count_list, label='times')
     plt.xlabel('complexes')
-    plt.savefig('dqn_cartpole.png')
+    plt.savefig('./dqn_cartpole.png')
 
 
 if __name__ == '__main__':

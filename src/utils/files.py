@@ -32,6 +32,15 @@ def getFullDirectory(dir):
     p = os.path.dirname(os.path.abspath(__file__) + dir)
     if not p.endswith('/'): p += '/'
 
+def spiltfilename(filename):
+    '''
+    分解文件名
+    :param filename: 带路径的完整文件名字符串
+    :return:         路径,文件名(无扩展名),扩展名
+    '''
+    (filepath,tempfilename) = os.path.split(filename)
+    (shotname,extension) = os.path.splitext(tempfilename)
+    return filepath,shotname,extension
 
 
 def writeLines(filename,lines,encode='utf-8',raiseError=False):

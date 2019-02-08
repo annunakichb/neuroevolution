@@ -5,6 +5,7 @@ from utils import strs as strs
 from utils import collections as collections
 from utils.properties import Range
 import  brain.models as models
+from brain.activation import ActivationFunction
 
 __all__ = ['NeuralElement', 'Neuron', 'Synapse']
 # 神经系统基本元素
@@ -22,6 +23,7 @@ class NeuralElement:
         self.modelConfiguration = modelConfiguration
         self.coord = coord
         self.states = {}
+        self.params = {}
         self.variables = []
 
         self._initModel()
@@ -50,9 +52,10 @@ class NeuralElement:
         根据模型配置初始号变量的值
         :return:
         '''
-
         if not collections.isEmpty(self.variables):
             for var in self.variables:
+                if var.type is not float:
+                    continue
                 if var.nameInfo.name in self.modelConfiguration:
                     var.range = Range(self.modelConfiguration[var.nameInfo.name])
                     var.value = 0 if var.range is None else var.range.sample()
@@ -109,6 +112,10 @@ class NeuralElement:
         if item in self.states.keys():
             return self.states[item]
 
+        # 在参数集合中查找
+        if item in self.params.keys():
+            return self.params[item]
+
         return super.__getitem__(item)
 
     # 设置变量或者状态的值
@@ -120,13 +127,15 @@ class NeuralElement:
             var.value = value
             return
 
+
         # 在状态集合中查找
         self.states[key] = value
         #super(NueralElement,self).__setitem__(key,value)
 
 #神经元
 class Neuron(NeuralElement):
-    def __init__(self,id,layer,birth,modelConfiguration,coord=None):
+    default_activation_function_name = 'sigmod'
+    def __init__(self,id,layer,birth,modelConfiguration,coord=None,activationFunction=None):
         '''
         神经元
         :param id:                       int或者str     ID
@@ -138,6 +147,7 @@ class Neuron(NeuralElement):
         super(Neuron, self).__init__(id,birth,modelConfiguration,coord)
         #super(id,birth,modelConfiguration,coord)
         self.layer = layer
+        self.activationFunction = activationFunction if activationFunction is not None else ActivationFunction.find(Neuron.default_activation_function_name)
 
     def __str__(self):
         #stateStr = collections.dicttostr(self.states)

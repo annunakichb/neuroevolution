@@ -115,6 +115,18 @@ def format(obj,**fmts):
         return str(obj)
         #raise RuntimeError('功能没有实现')
 
+    # 判断是否为浮点数
+    def isfloat(value):
+        try:
+            x = float(value)  # 此处更改想判断的类型
+        except TypeError:
+            return False
+        except ValueError:
+            return False
+        except Exception as e:
+            return False
+        else:
+            return True
 #endregion
 
 #region command

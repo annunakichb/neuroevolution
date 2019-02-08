@@ -138,6 +138,7 @@ class Session:
                     self.operationRecords[operationName] = result
                     self.monitor.recordOperation(operation,result)
                 except RuntimeError as e:
+                    print(e)
                     self.monitor.recordOperation(operation,result,e)
                     self.exitCode = -2
                     self.exitMsg = '运行失败，进化操作执行过程发生异常:' + operationName + ":" + str(e)

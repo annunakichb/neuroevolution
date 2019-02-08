@@ -1,10 +1,13 @@
 import numpy as np
 import os
+import datetime
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
+from numba import jit
 
+import utils.files as files
 
 class ForceGenerator():
     K_MIN = 0.
@@ -14,8 +17,12 @@ class ForceGenerator():
     OMEGE_MAX = 1.0
     OMEGE_STEP = 0.01
     SIGMA_MIN = 0.01
-    SIGMA_MAX = 1.
-    SIGMA_STEP = 0.1
+    SIGMA_MAX = 2.5
+    SIGMA_STEP = 0.5
+
+    Complexity = {}
+    complex_interval = 0.1
+    complex_name = 'cramer_rao'
 
     #region 初始化和风力计算
     def __init__(self,k,w,f,sigma,**kwargs):
@@ -38,9 +45,8 @@ class ForceGenerator():
         self.initsigma,self.sigma = sigma,sigma
         self.action_func = kwargs['action_func'] if 'action_func' in kwargs else self._default_action_func
         self.action_vaild = kwargs['action_vaild'] if 'action_vaild' in kwargs else False
-        self.complex_interval = kwargs['complex_interval'] if 'complex_interval' in kwargs else 0.1
-        self.complex_name = kwargs['complex_name'] if 'complex_name' in kwargs else 'cramer_rao'
-        self.K,self.W,self.C = self.__prepare_complex()
+        ForceGenerator.complex_interval = kwargs['complex_interval'] if 'complex_interval' in kwargs else 0.1
+        ForceGenerator.complex_name = kwargs['complex_name'] if 'complex_name' in kwargs else 'cramer_rao'
 
     def next(self,t,actions=None):
         '''
@@ -58,7 +64,7 @@ class ForceGenerator():
     #endregion
 
 
-    #region 复杂度计算相关
+    #region 取得下一个更高的复杂度计算
     def promptComplex(self, min_up=0.):
         '''
         提升复杂度
@@ -70,6 +76,8 @@ class ForceGenerator():
             return self._promptComplex()
         while True:
             changed, newcomplex, k, w, f, sigma = self._promptComplex()
+            if newcomplex is None:
+                return False,curComplex,k, w, f, sigma
             if not changed or newcomplex - curComplex >= min_up:
                 return changed, newcomplex, k, w, f, sigma
 
@@ -98,7 +106,7 @@ class ForceGenerator():
                     if k == self.k and w == self.w:
                         continue
                     complex = self.find_complex(k,w,self.f,self.sigma)
-                    if complex > maxcomplex:
+                    if complex is None or complex > maxcomplex:
                         maxcomplex = complex
                         maxk,maxw = k,w
                         changed = True
@@ -109,79 +117,104 @@ class ForceGenerator():
         self.w = maxw
         return changed,maxcomplex,self.k,self.w,self.f,self.sigma
 
+    #endregion
 
-    def __prepare_complex(self):
+    #region 计算所有复杂度
+    @classmethod
+    def compute_all_complex(cls,**kwargs):
         '''
-        事先计算各种参数下的复杂度
-        :param samplecount:   每次计算复杂度的样本采样次数
-        :param statcount:     计算次数，返回结果是多次平均
-        :return:
+        计算所有的复杂度
+        :param kwargs:
+              noise tuple(float,str)  当noise为有效数值的时候,表示固定噪音方差缺省是force.py的SIMGA_配置中的最小值
+                                      当为"interval"的时候,根据force.py的配置生成多个复杂度三维图'
+                                      当为"dimension"的时候,根据force.py的配置高维复杂度数据,不生成三维图'
+              file str                复杂度数据的文件名(np格式,缺省为force.npz),以及三维图文件名(缺省为force.$noise.npz)
+        :return: bool,str,Union(float,str),tuple
         '''
+        noise = kwargs['noise'] if 'noise' in kwargs.keys() else ForceGenerator.SIGMA_MIN
+        file = kwargs['file'] if 'file' in kwargs.keys() else 'complex.npz'
+        complexfilename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\' + file
 
-        complexfilename = os.path.split(os.path.realpath(__file__))[0] + '\\complex.npz'
-        if os.path.exists(complexfilename):
-            d = np.load(complexfilename)
-            K,W,C = d['arr_0'],d['arr_1'],d['arr_2']
-            return K,W,C
-        print('准备复杂度计算,这可能会花费数分钟...')
-        k = np.arange(ForceGenerator.K_MIN, ForceGenerator.K_MAX, ForceGenerator.K_STEP)
-        w = np.arange(ForceGenerator.OMEGE_MIN, ForceGenerator.OMEGE_MAX, ForceGenerator.OMEGE_STEP)
-        s = np.arange(ForceGenerator.SIGMA_MIN, ForceGenerator.SIGMA_MAX, ForceGenerator.SIGMA_STEP)
-        sigma = s[0]
+        if noise == 'dimension':
+            print('准备高维复杂度计算,这可能会花费数分钟...')
+            k = np.arange(ForceGenerator.K_MIN, ForceGenerator.K_MAX, ForceGenerator.K_STEP)
+            w = np.arange(ForceGenerator.OMEGE_MIN, ForceGenerator.OMEGE_MAX, ForceGenerator.OMEGE_STEP)
+            s = np.arange(ForceGenerator.SIGMA_MIN, ForceGenerator.SIGMA_MAX, ForceGenerator.SIGMA_STEP)
+            K, W,S = np.meshgrid(k, w,s)
+            C = [[ForceGenerator.compute_complex(k, w, np.pi / 2 if w == 0 else 0.,s) for k, w,s in zip(ks, ws,ss)] for ks, ws,ss in
+                 zip(K, W,S)]
+            C = np.array(C)
 
-        K, W = np.meshgrid(k, w)
-        C = [[self.compute_complex(k, w, np.pi / 2 if w == 0 else 0., sigma) for k, w in zip(ks, ws)] for ks, ws in
-             zip(K, W)]
-        C = np.array(C)
+            np.savez(complexfilename, K, W, S,C)
+            return True, '', noise, (K, W, S, C)
+        else:
+            s = []
+            if noise == 'interval':
+                s = np.arange(ForceGenerator.SIGMA_MIN, ForceGenerator.SIGMA_MAX, ForceGenerator.SIGMA_STEP)
+            elif type(noise) is float:
+                s = [float(noise)]
+            elif type(noise) is list:
+                s = noise
 
-        np.savez(complexfilename, K, W, C)
-        return K,W,C
+            k = np.arange(ForceGenerator.K_MIN, ForceGenerator.K_MAX, ForceGenerator.K_STEP)
+            w = np.arange(ForceGenerator.OMEGE_MIN, ForceGenerator.OMEGE_MAX, ForceGenerator.OMEGE_STEP)
+            K, W = np.meshgrid(k, w)
+            filepath,filename,fileext = files.spiltfilename(complexfilename)
+            for sigma in s:
+                print('生成噪音方差为'+str(sigma)+'的复杂度数据...')
 
-    def draw_complex(self):
-        '''
-        画出复杂度图表
-        :return:
-        '''
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        surf = ax.plot_surface(self.K, self.W, self.C, cmap=cm.coolwarm,
-                               linewidth=0, antialiased=False)
-        fig.colorbar(surf, shrink=0.5, aspect=5)
-        plt.show()
+                starttime = datetime.datetime.now()
 
+                C = [[ForceGenerator.compute_complex(k, w, np.pi / 2 if w == 0 else 0., sigma) for k, w in zip(ks, ws)] for ks, ws in
+                    zip(K, W)]
+                C = np.array(C)
+
+                np.savez(filepath+'\\'+filename+'.'+str(sigma)+fileext, K, W, C)
+                fig = plt.figure()
+                ax = fig.gca(projection='3d')
+                surf = ax.plot_surface(K, W, C, cmap=cm.coolwarm,
+                                       linewidth=0, antialiased=False)
+                fig.colorbar(surf, shrink=0.5, aspect=5)
+                plt.savefig(filepath +'\\'+filename+'.'+str(sigma)+'.png')
+                # long running
+                endtime = datetime.datetime.now()
+                print('生成结束，耗时'+str((endtime-starttime).seconds)+'秒')
+            return True,'',noise
+
+        return False,'参数错误:'+noise,noise
     def currentComplex(self):
         '''
         当前复杂度
         :return:
         '''
-        return self.find_complex(self.k,self.w,self.f,self.sigma)
+        return ForceGenerator.find_complex(self.k,self.w,self.f,self.sigma)
 
-    def find_complex(self,k,w,f,sigma):
+    @classmethod
+    def load_complex(cls,sigma=None):
         '''
-        寻找对应k，w，f和sigma的复杂度
-        :param k:
-        :param w:
-        :param f:
-        :param sigma:
+        读取复杂度数据
+        :param sigma: Union(float,list) None,读取高维复杂度数据,list,读取特噪声方差的复杂度数据
         :return:
         '''
-        windex = -1
-        min_error = 0.00001
-        for index,ws in enumerate(self.W):
-            if np.abs(ws[0] - w) < min_error:
-                windex = index
-                break
-        kindex = -1
-        for index,ks in enumerate(self.K[0]):
-            if np.abs(ks - k) < min_error:
-                kindex = index
-                break
-        #kindex = np.argwhere(np.abs(self.K[0]-k)<min_error)
-        if windex == -1 or kindex == -1:
-            return None
-        return self.C[windex][kindex]
+        if sigma is None:
+            complexfilename = [os.path.split(os.path.realpath(__file__))[0] + '\\datas\\complex.npz']
+            d = np.load(complexfilename)
+            K, W, S,C = d['arr_0'], d['arr_1'], d['arr_2'],d['arr_3']
+            ForceGenerator.Complexity['total'] = (K,W,S,C)
+            return
+        if type(sigma) is float:
+            sigma = [sigma]
+        elif type(sigma) is list:
+            if len(sigma)<=0:
+                sigma = np.arange(ForceGenerator.SIGMA_MIN, ForceGenerator.SIGMA_MAX, ForceGenerator.SIGMA_STEP)
+        for s in sigma:
+            complexfilename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\complex' + '.' + str(s) + '.npz'
+            d = np.load(complexfilename)
+            K, W, C = d['arr_0'], d['arr_1'], d['arr_2']
+            ForceGenerator.Complexity[s] = K, W, C
 
-    def compute_complex(self,k,w,f,sigma,t_min=0.,t_max=2.,t_step=0.02,count=2):
+    @classmethod
+    def compute_complex(cls, k, w, f, sigma, t_min=0., t_max=2., t_step=0.02, count=2):
         '''
         给定一组参数（k,w,f,sigma）计算复杂度
         :param k:
@@ -200,28 +233,80 @@ class ForceGenerator():
             samples = []
             while t < t_max:
                 t += t_step
-                wind = k * np.sin(w*t+f) + np.random.normal(0,sigma,1)
+                wind = k * np.sin(w * t + f) + np.random.normal(0, sigma, 1)
                 samples.append(wind)
-            complexes.append(self.complex(samples))
+            complexes.append(ForceGenerator.complex(samples))
         return np.average(complexes)
-    #endregion
+
+    # endregion
+
+
+    @classmethod
+    def draw_complex(cls,sigma=None):
+        '''
+        画出复杂度图表
+        @:param sigma float 特定噪音方差的复杂度数据
+        :return:
+        '''
+
+        K, W, C = ForceGenerator.Complexity[sigma]
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(K, W, C, cmap=cm.coolwarm,
+                               linewidth=0, antialiased=False)
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+        plt.show()
+
+
+    @classmethod
+    def find_complex(cls,k,w,f,sigma):
+        '''
+        寻找对应k，w，f和sigma的复杂度
+        :param k:
+        :param w:
+        :param f:
+        :param sigma:
+        :return:
+        '''
+        if sigma not in ForceGenerator.Complexity.keys():
+            ForceGenerator.load_complex(sigma)
+        K, W, C = ForceGenerator.Complexity[sigma]
+
+        windex = -1
+        min_error = 0.00001
+        for index,ws in enumerate(W):
+            if np.abs(ws[0] - w) < min_error:
+                windex = index
+                break
+        kindex = -1
+        for index,ks in enumerate(K[0]):
+            if np.abs(ks - k) < min_error:
+                kindex = index
+                break
+        #kindex = np.argwhere(np.abs(self.K[0]-k)<min_error)
+        if windex == -1 or kindex == -1:
+            return None
+        return C[windex][kindex]
+
 
     #region 复杂度公式实现
-    def complex(self,samples,name = None):
+    @classmethod
+    def complex(cls,samples,name = None):
         '''复杂度函数 '''
         if name is None or name == '':
-            name = self.complex_name.lower()
+            name = ForceGenerator.complex_name.lower()
 
         if name == 'lmc-renyi':
-            return self.complex_lmcrenyi(samples)
+            return ForceGenerator.complex_lmcrenyi(samples)
         elif name == 'lmc':
-            return self.complex_lmc(samples)
+            return ForceGenerator.complex_lmc(samples)
         elif name == 'stat':
-            return self.complex_stat(samples)
+            return ForceGenerator.complex_stat(samples)
         else:
-            return self.complex_cramer_rao(samples)
+            return ForceGenerator.complex_cramer_rao(samples)
 
-    def complex_lmcrenyi(self,samples,alpha=0.5,beta=2.0):
+    @classmethod
+    def complex_lmcrenyi(cls,samples,alpha=0.5,beta=2.0):
         '''
         LMC-R´enyi complexity
         :param samples:
@@ -229,7 +314,7 @@ class ForceGenerator():
         :param beta:
         :return:
         '''
-        stat = self._compute_stat(samples, self.complex_interval)
+        stat = ForceGenerator._compute_stat(samples, ForceGenerator.complex_interval)
         Ra,Rb = 0.0,0.0
         for key, value in stat.items():
             p = value / len(samples)
@@ -239,7 +324,8 @@ class ForceGenerator():
         Rb = np.log(Rb) / (1-beta)
         return np.exp(Ra-Rb)
 
-    def complex_stat(self,samples,k=1.3806505 * (10**-23)):
+    @classmethod
+    def complex_stat(cls,samples,k=1.3806505 * (10**-23)):
         '''
         简单统计复杂度
         :param samples:
@@ -247,7 +333,7 @@ class ForceGenerator():
         :param k:
         :return:
         '''
-        stat = self._compute_stat(samples, self.complex_interval)
+        stat = ForceGenerator._compute_stat(samples, ForceGenerator.complex_interval)
         s = 0.0
         for key, value in stat.items():
             p = value / len(samples)
@@ -255,14 +341,15 @@ class ForceGenerator():
         S = -1 * s / np.log(len(stat))
         return S * (1-S)
 
-    def complex_lmc(self,samples):
+    @classmethod
+    def complex_lmc(cls,samples):
         '''
         LMC复杂度
         :param samples:
         :param interval:
         :return:
         '''
-        stat = self._compute_stat(samples, self.complex_interval)
+        stat = ForceGenerator._compute_stat(samples, ForceGenerator.complex_interval)
         H,D = 0.,0.
         for key, value in stat.items():
             p = value / len(samples)
@@ -271,21 +358,23 @@ class ForceGenerator():
         return -1 * H * D
 
 
-    def complex_cramer_rao(self,samples):
+    @classmethod
+    def complex_cramer_rao(cls,samples):
         '''
         The　Cr´amer-Rao complexity 复杂度
         :param samples:
         :param interval:
         :return:
         '''
-        stat = self._compute_stat(samples,self.complex_interval)
+        stat = ForceGenerator._compute_stat(samples,ForceGenerator.complex_interval)
         entropy = 0.
         for key, value in stat.items():
             p = value / len(samples)
             entropy += p * np.log(p)
         return -1 * entropy * np.var(samples)
 
-    def _compute_stat(self,samples,interval=0.1):
+    @classmethod
+    def _compute_stat(cls,samples,interval=0.1):
         datas = [np.round(x, int(np.log10(1 / interval))) for x in samples]
         datas = np.array(datas)
         keys = np.unique(datas)
@@ -303,12 +392,14 @@ class ForceGenerator():
         pass
     #endregion
 
-force_generator = ForceGenerator(0.0,0.0,0.0,0.01)
+ForceGenerator.load_complex(sigma=1.01)
+force_generator = ForceGenerator(0.0,0.0,0.0,1.01)
 
 if __name__ == '__main__':
+    ForceGenerator.load_complex(sigma=1.01)
     changed, maxcomplex, k, w, f, sigma = force_generator.promptComplex(5.0)
     print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k, w, f, sigma))
 
     #generator = ForceGenerator(0,0,0,0)
-    force_generator.draw_complex()
+    ForceGenerator.draw_complex(sigma=0.01)
 

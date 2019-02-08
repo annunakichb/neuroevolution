@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import gc
+import numpy as np
 
 from domains.ne.cartpoles.enviornment.cartpole import SingleCartPoleEnv
 import ne.callbacks as callbacks
@@ -24,7 +26,7 @@ def fitness(ind,session):
     '''
 
     net = ind.getPhenome()
-    reward_list, notdone_count_list = runner.do_evaluation(3,env,net.activate)
+    reward_list, notdone_count_list = runner.do_evaluation(2,env,net.activate)
 
     return min(notdone_count_list)
 
@@ -36,19 +38,22 @@ def callback(event,monitor):
     callbacks.neat_callback(event,monitor)
     global epochcount
     if event == 'epoch.end':
+        #gc.collect()
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
         # 如果最大适应度达到了env.max_notdone_count（说明对当前环境已经产生适应），或者进化迭代数超过100次（当前环境下适应达到最大）
         # 则提升复杂度
         epochcount += 1
-        if maxfitness >= env.max_notdone_count or epochcount >= 30:
+        if maxfitness >= env.max_notdone_count or epochcount >= 10:
             fitness_records.append(maxfitness)
             complex_records.append(force.force_generator.currentComplex())
             print([(f, c) for f, c in zip(complex_records, fitness_records)])
 
-            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(10.0)
+            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(5.0)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
+                np.save('neat_result', complex_records, fitness_records)
             else:
+                np.save('neat_result', complex_records, fitness_records)
                 #plt.plot(complex_records, reward_list, label='reward')
                 plt.plot(complex_records, fitness_records, label='times')
                 plt.xlabel('complexes')
@@ -110,7 +115,6 @@ def run():
         }
     }
 
-
     # 定义种群
     popParam = {
         'indTypeName' : 'network',                                #种群的个体基因类型名，必须，该类型的个体基因应已经注册过，参见evolution.agent,必须
@@ -119,7 +123,7 @@ def run():
            'connectionRate':1.0,                                  # 连接比率
         },
         'genomeDefinition' : netdef,                              #基因定义参数,可选
-        'size':100,                                               #种群大小，必须
+        'size':50,                                               #种群大小，必须
         'elitistSize':0.05,                                        #精英个体占比，小于1表示比例，大于等于1表示数量
         'species':{                                               #物种参数，可选
             'method':'neat_species',                              # 物种分类方法,在物种参数中必须

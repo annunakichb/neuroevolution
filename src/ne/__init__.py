@@ -22,3 +22,5 @@ def neuroevolution_init():
     # 注册ne个体类型
     neuralNetworkIndType = IndividualType('network', NeuralNetwork, DefaultNeuralNetworkGenomeFactory(), NeuralNetwork)
     agent.individualTypes.register(neuralNetworkIndType, 'network')
+
+

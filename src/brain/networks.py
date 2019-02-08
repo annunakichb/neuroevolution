@@ -3,11 +3,14 @@ import  numpy as np
 import threading
 from functools import reduce
 from utils import collections as collections
+from utils.coords import Coordination
 from utils.properties import Registry
 from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
 from brain.runner import NeuralNetworkTask
+import brain.networks as networks
+
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
 # 网络类型
@@ -119,6 +122,78 @@ class NeuralNetwork:
 
         return newnet
 
+    def createAllNeurons(self,model_config_function=None):
+        '''
+        创建所有神经元
+        :param model_config_function:　　对每层，每个神经元分配计算模型配置信息的函数
+        :return:　None
+        '''
+        if model_config_function is None:
+            model_config_function = self.__default_model_config_funtion
+        for index,count in enumerate(self.definition.neuronCounts):
+            modelconfig = model_config_function(index,-1)
+            self.createLayer(index,modelconfig)
+
+    def __default_model_config_funtion(self,layer,xh):
+        '''
+        缺省模型分配函数
+        :param layer: 　神经元层
+        :param xh: 　　神经元序号
+        :return: 　　　模型配置
+        '''
+        if layer == 0:
+            return self.definition.models.input
+        elif layer == len(self.definition.neuronCounts)-1:
+            if 'output' in self.definition.models:
+                return self.definition.models.output
+        return self.definition.models.hidden
+    def createLayer(self,layerIndex,modelConfig):
+        if layerIndex < 0 or layerIndex >= len(self.definition.neuronCounts):
+            raise RuntimeError('createLayer failed: invaild layerIndex:'+ str(layerIndex))
+        count = self.definition.neuronCounts[layerIndex]
+        # 计算实际层编号
+        layerInterval = int((self.definition.config.range[0][1] - self.definition.config.range[0][0])/(len(self.definition.neuronCounts)-1))
+        layer = 0
+        if layerIndex == 0:layer = self.definition.config.range[0][0]
+        elif layerIndex == len(self.definition.neuronCounts)-1:layer = self.definition.config.range[0][1]
+        else: layer = self.definition.config.range[0][0]+layerIndex * layerInterval
+
+        while len(self.neurons) <= layerIndex:
+            self.neurons.insert(layerIndex, [])
+        # 生成神经元坐标
+        idGenerator = networks.idGenerators.find(self.definition.idGenerator)
+        coords = self.__createCoord(layer, count)
+
+        # 创建神经元
+        for i in range(count):
+            coord = coords[i]
+            neuronid = idGenerator.getNeuronId(self, coord, None)
+            neuron = Neuron(neuronid, layer, 0, modelConfig, coord)
+            self.neurons[layerIndex].append(neuron)
+
+        return self.neurons[layerIndex]
+
+    def __createCoord(self,layer,count):
+        '''
+        创建坐标
+        :param layer:   int  层号
+        :param count:   int  神经元数量
+        :return: list of Coordination
+        '''
+        netdef = self.definition
+        width = netdef.config.range[1][1] - netdef.config.range[1][0]
+        interval = int(width / (count + 1))
+
+        coords = []
+        for i in range(count):
+            values = [layer]
+            if netdef.config.dimension >= 2:
+                values.append((i+1)*interval)
+            if netdef.config.dimension >= 3:
+                values.append(int((netdef.config.range[2][1] - netdef.config.range[2][0])/2))
+            coord = Coordination(*values)
+            coords.append(coord)
+        return coords
     #endregion
 
     #region 神经元素数量
@@ -393,9 +468,12 @@ class NeuralNetwork:
             "连接神经元失败(NeuralNetwork.connect(srcid,destid)):synapseModelConfig效")
 
         if srcid is not list and destid is not list:
-            if self.getNeuron(id=srcid) is None:raise  RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+srcid)
-            if self.getNeuron(id=destid) is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+destid)
-
+            srcNeuron = self.getNeuron(id=srcid)
+            destNeuron = self.getNeuron(id=destid)
+            if srcNeuron is None:raise  RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+srcid)
+            if destNeuron is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元无效："+destid)
+            if srcNeuron.layer >= destNeuron.layer:
+                raise RuntimeError('连接神经元失败(NeuralNetwork.connect(srcid,destid)):接入神经元的层大于等于接出神经元的层:src='+str(srcNeuron)+',dest='+str(destNeuron))
             synapse = Synapse(idGenerator.getSynapseId(self,srcid,destid),birth,srcid,destid,synapseModelConfig)
             self._connectSynapse(synapse)
             return self
@@ -475,7 +553,7 @@ class NeuralNetwork:
         :return:
         '''
         if birth < 0:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):birth无效')
-        if layer < 0:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):layer无效')
+        #if layer < 0:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):layer无效')
         if neuronModelConfig is None:raise  RuntimeError('添加神经元失败(NeuralNetwork.put):neuronModelConfig无效')
         idGenerator = idGenerators.find(self.definition.get('idGenerator', 'default'))
         if idGenerator is None: raise RuntimeError("连接神经元失败(NeuralNetwork.connect(srcid,destid)):idGenerator无效")

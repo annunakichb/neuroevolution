@@ -3,6 +3,7 @@
 
 import math
 import random
+import  numpy as np
 from utils.properties import NameInfo
 from utils.properties import Registry
 from utils.collections import *
@@ -124,7 +125,71 @@ class Sigmod(ActivationFunction):
 
 #endregion
 
+
+
+
+#region 线性激活函数
+
+# S函数
+class Linear(ActivationFunction):
+    nameInfo = NameInfo(name='linear', caption='线性激活函数', description='y = max(-1,min(1,x))',cataory='linear')
+    def __init__(self):
+        '''
+        线性激活函数
+        '''
+        self.nameInfo = Linear.nameInfo
+
+    def getParamNames(self):
+        '''
+        计算所需参数名
+        :return:
+        '''
+        return []
+
+    def calculate(self,inputs,params):
+        '''
+        计算函数
+        :param inputs:      输入
+        :param modelparams: 模型参数
+        :return:状态值(float)和是否激活(bool)
+        '''
+        return max(-1.,min(1.,inputs))
+
+
+#endregion
+
+# 三角函数
+class Sin(ActivationFunction):
+    nameInfo = NameInfo(name='sin', caption='线性激活函数', description='k*sin(omega*x+f)',cataory='triangle')
+    def __init__(self,k=1.,omega=1.,f=0.):
+        '''
+        线性激活函数
+        '''
+        self.k = k
+        self.omega = omega
+        self.f = f
+        self.nameInfo = Sin.nameInfo
+
+    def getParamNames(self):
+        '''
+        计算所需参数名
+        :return:
+        '''
+        return [self.k,self.omega,self.f]
+
+    def calculate(self,inputs,params):
+        '''
+        计算函数
+        :param inputs:      输入
+        :param modelparams: 模型参数
+        :return:状态值(float)和是否激活(bool)
+        '''
+        return self.k * np.sin(self.omega * inputs + self.f)
+#endregion
+
 #注册的激活函数
 activations = Registry()
 activations.register(Gaussian(),Gaussian.nameInfo.name)
 activations.register(Sigmod(),Sigmod.nameInfo.name)
+activations.register(Linear(),Linear.nameInfo.name)
+activations.register(Sin(),Sin.nameInfo.name)

@@ -41,7 +41,7 @@ class NeatMutate:
                 raise RuntimeError('对个体激活函数的变异还没有实现')
 
 
-            succ,msg,oper,obj = self.__dometate(session.pop[mutateid],session)
+            succ,msg,oper,obj = self.__domutate(session.pop[mutateid], session)
             if succ:
                 if oper not in mutateStat.keys():mutateStat[oper] = 0
                 mutateStat[oper] = mutateStat[oper] + 1
@@ -53,7 +53,7 @@ class NeatMutate:
         resultMsg = reduce(lambda x,y:x+","+y,map(lambda key:key + "数量=" + str(mutateStat[key]),mutateStat)) if len(mutateStat)>0 else '无有效变异'
         return True,resultMsg,None
 
-    def __dometate(self,ind,session):
+    def __domutate(self, ind, session):
         # 生成变异各种操作概率
         topoopertions = ['addnode', 'addconnection', 'deletenode', 'deleteconnection']
         topoopertionrates = [session.runParam.mutate.topo.addnode, session.runParam.mutate.topo.addconnection,
@@ -93,13 +93,12 @@ class NeatMutate:
         toneuron = net.getNeuron(synapse.toId)
         neuronModel = net.definition.models.hidden
         synapseModel = net.definition.models.synapse
-        newNeuronLayer = int((toneuron.layer - fromneuron.layer)/2)
+        newNeuronLayer = int((toneuron.layer + fromneuron.layer)/2)
         idgenerator = networks.idGenerators.find(net.definition.idGenerator)
         newNeuronid = idgenerator.getNeuronId(net,None,synapse)
         newNeuron = Neuron(newNeuronid,newNeuronLayer,session.curTime,neuronModel)
         net.putneuron(newNeuron,fromneuron.id,toneuron.id,synapseModel)
         net.remove(synapse)
-
 
         return True,'','addnode',newNeuron
 

@@ -75,7 +75,7 @@ class Individual:
         if indMeta.genomeDecoder is None:
             return self.genome
 
-        return indMeta.genomeDecoder.create(self)
+        return indMeta.genomeDecoder.decode(self)
 
     def __getitem__(self, item):
         if item in self.features.keys():
