@@ -25,10 +25,46 @@ class HyperNEAT:
             net = NeuralNetwork(cppn.id,self.netdef)
             net.createAllNeurons()
             self.networks[cppn.id] = net
+            #ns = net.getNeurons()
+            #for n in ns:
+            #    n['bias'] = 0.0
         
         return net
-    
     def decode(self,ind):
+        if self.netdef.config.across:
+            return self._decode_across(ind)
+        else:
+            return self._decode_noacross(ind)
+
+    def _decode_noacross(self,ind):
+        cppn = ind.genome
+        net = self.createnetwork(ind)
+        neuronss = net.neurons
+        for fromlayerIndex, fromneurons in enumerate(neuronss):  # 每一层
+            tolayerIndex = fromlayerIndex+1
+            if tolayerIndex >= len(neuronss):
+                break
+            for fromindex, fromneuron in enumerate(fromneurons):  # 每一层的每一个源神经元
+                for toindex, toneuron in enumerate(neuronss[tolayerIndex]):
+                    # 用cppn计算权重
+                    inputs = [fromneuron.coord.X, fromneuron.coord.Y, toneuron.coord.X, toneuron.coord.Y]
+                    output = float(cppn.activate(inputs))
+                    output = ((30.0 - -30.0)*(output - (-1.0)) / (1.0 - -1.0)) + -30.0
+                    # 为网络设置权重
+                    synapse = net.getSynapse(fromId=fromneuron.id, toId=toneuron.id)
+                    if synapse is None:
+                        if output != 0:
+                            synapse = net.connect(fromneuron.id, toneuron.id, 0, net.definition.models.synapse)
+                            synapse['weight'] = output
+                    else:
+                        if output != 0:
+                            synapse['weight'] = output
+                        else:
+                            net.remove(synapse)
+        return net
+
+
+    def _decode_across(self,ind):
         cppn = ind.genome
         net = self.createnetwork(ind)
         neuronss = net.neurons
@@ -45,10 +81,10 @@ class HyperNEAT:
                         if synapse is None:
                             if output != 0:
                                 synapse = net.connect(fromneuron.id,toneuron.id,0,net.definition.models.synapse)
-                                synapse['bias'] = output
+                                synapse['weight'] = output
                         else:
                             if output != 0:
-                                synapse['bias'] = output
+                                synapse['weight'] = output
                             else:
                                 net.remove(synapse)
         return net

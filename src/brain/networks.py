@@ -182,13 +182,13 @@ class NeuralNetwork:
         '''
         netdef = self.definition
         width = netdef.config.range[1][1] - netdef.config.range[1][0]
-        interval = int(width / (count + 1))
+        interval = int((width+1) / count)
 
         coords = []
         for i in range(count):
             values = [layer]
             if netdef.config.dimension >= 2:
-                values.append((i+1)*interval)
+                values.append(netdef.config.range[1][0] + i*interval)
             if netdef.config.dimension >= 3:
                 values.append(int((netdef.config.range[2][1] - netdef.config.range[2][0])/2))
             coord = Coordination(*values)

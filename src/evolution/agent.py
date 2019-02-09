@@ -36,6 +36,7 @@ speciesType = Registry()
 
 
 
+
 #个体类
 class Individual:
     def __init__(self,id,birth,genome,indTypeName,parentIds=[],speciedId = 0):
@@ -50,6 +51,7 @@ class Individual:
         self.id = id
         self.birth = birth
         self.genome = genome
+        self._cachedPhenome = None
         self.indTypeName = indTypeName
         self.speciedId = speciedId
         self.features = {}
@@ -75,7 +77,11 @@ class Individual:
         if indMeta.genomeDecoder is None:
             return self.genome
 
-        return indMeta.genomeDecoder.decode(self)
+        self._cachedPhenome =  indMeta.genomeDecoder.decode(self)
+        return self._cachedPhenome
+
+    def getCachedPhenome(self):
+        return self._cachedPhenome
 
     def __getitem__(self, item):
         if item in self.features.keys():
@@ -102,6 +108,9 @@ class Individual:
 #endregion
 
 #region 种群信息
+def doIndEvaulate_warpper(pop,ind,key,evoluator,session):
+    pop.__doIndEvaulate(ind,key,evoluator,session)
+
 class Population:
     __slots__ = ['params','inds','features','eliest','species']
     def __init__(self,params,initInds):
@@ -149,10 +158,13 @@ class Population:
             # 对每一个个体计算评估值
             if session.runParam.evalate.parallel>0:
                 pool = Pool(session.runParam.evalate.parallel)
-                jobs = []
-                collections.foreach(self.inds,lambda ind: jobs.append(self.pool.apply_async(self.__doIndEvaulate, (ind, key,evoluator,session))))
-                pool.join()
+                for x in range(session.runParam.evalate.parallel):
+                    tr = pool.apply_async(doIndEvaulate_warpper, (self,self.inds[x], key, evoluator, session))
+                    print(tr.get())
+                #collections.foreach(self.inds,lambda ind: jobs.append(pool.apply_async(self.__doIndEvaulate, (ind, key,evoluator,session))))
                 pool.close()
+                pool.join()
+
             else:
                 for ind in self.inds:
                     value = evoluator.calacute(ind,session)

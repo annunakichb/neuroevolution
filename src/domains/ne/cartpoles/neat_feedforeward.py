@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import gc
 import numpy as np
+import os
+import csv
 
 from domains.ne.cartpoles.enviornment.cartpole import SingleCartPoleEnv
 import ne.callbacks as callbacks
@@ -13,6 +15,7 @@ from evolution.session import EvolutionTask
 
 import domains.ne.cartpoles.enviornment.force as force
 import domains.ne.cartpoles.enviornment.runner as runner
+from brain.viewer import NetworkView
 
 env = SingleCartPoleEnv()
 
@@ -32,6 +35,7 @@ def fitness(ind,session):
 
 fitness_records = []
 complex_records=[]
+maxfitness_records = []
 epochcount = 0
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
@@ -40,18 +44,37 @@ def callback(event,monitor):
     if event == 'epoch.end':
         #gc.collect()
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
-        # 如果最大适应度达到了env.max_notdone_count（说明对当前环境已经产生适应），或者进化迭代数超过100次（当前环境下适应达到最大）
+        maxfitness_ind = monitor.evoTask.curSession.pop.inds[0]
+        maxfitness_records.append(maxfitness)
+
+        # 如果最大适应度达到了env.max_notdone_count（说明对当前环境已经产生适应），或者进化迭代数超过10次（当前环境下适应达到最大）
         # 则提升复杂度
         epochcount += 1
         if maxfitness >= env.max_notdone_count or epochcount >= 10:
+            # 保存复杂度和对应最大适应度记录
             fitness_records.append(maxfitness)
             complex_records.append(force.force_generator.currentComplex())
             print([(f, c) for f, c in zip(complex_records, fitness_records)])
+            np.save('neat_result', complex_records, fitness_records)
 
+            # 保存过程中每一步的最大适应度记录
+            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\neat.csv'
+            out = open(filename, 'a', newline='')
+            csv_write = csv.writer(out, dialect='excel')
+            csv_write.writerow([complex_records[-1]]+maxfitness_records)
+            maxfitness_records.clear()
+
+            # 保存最优基因网络拓扑
+            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\neat_ind' + str(
+                maxfitness_ind.id) + '_' + \
+                       str(maxfitness) + '_' + str(complex_records[-1]) + '.svg'
+            netviewer = NetworkView()
+            netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
+
+            # 提升复杂度
             changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(5.0)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
-                np.save('neat_result', complex_records, fitness_records)
             else:
                 np.save('neat_result', complex_records, fitness_records)
                 #plt.plot(complex_records, reward_list, label='reward')

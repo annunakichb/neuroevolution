@@ -37,8 +37,8 @@ class NeatMutate:
         for mutateid in mutateinds:
             if session.runParam.mutate.model.rate > 0:
                 raise RuntimeError('对个体计算模型的变异还没有实现')
-            if session.runParam.mutate.activation.rate > 0:
-                raise RuntimeError('对个体激活函数的变异还没有实现')
+            #if session.runParam.mutate.activation.rate > 0:
+            #    raise RuntimeError('对个体激活函数的变异还没有实现')
 
 
             succ,msg,oper,obj = self.__domutate(session.pop[mutateid], session)
@@ -55,10 +55,11 @@ class NeatMutate:
 
     def __domutate(self, ind, session):
         # 生成变异各种操作概率
-        topoopertions = ['addnode', 'addconnection', 'deletenode', 'deleteconnection']
+        topoopertions = ['addnode', 'addconnection', 'deletenode', 'deleteconnection','activation']
         topoopertionrates = [session.runParam.mutate.topo.addnode, session.runParam.mutate.topo.addconnection,
-                             session.runParam.mutate.topo.deletenode, session.runParam.mutate.topo.deleteconnection]
-        operationfuncs = [self.__do_mutate_addnode,self.__do_mutate_addconnection,self.__do_mutate_deletenode,self.__do_mutate_deleteconnection]
+                             session.runParam.mutate.topo.deletenode, session.runParam.mutate.topo.deleteconnection,
+                             session.runParam.mutate.activation.rate]
+        operationfuncs = [self.__do_mutate_addnode,self.__do_mutate_addconnection,self.__do_mutate_deletenode,self.__do_mutate_deleteconnection,self.__do_mutate_activationFunction]
 
         #np.random.seed(0)
         retryCount = 0
@@ -81,7 +82,7 @@ class NeatMutate:
                 return False,'ind' + str(ind.id) + '所有变异操作都失败','',None
 
     def __do_mutate_addnode(self,ind,session):
-        net = ind.getPhenome()
+        net = ind.genome
         synapses = net.getSynapses()
         synapse = None
         if len(synapses)<=0:
@@ -104,7 +105,7 @@ class NeatMutate:
 
     def __do_mutate_addconnection(self,ind,session):
         # 随机选择两个神经元
-        net = ind.getPhenome()
+        net = ind.genome
         ns = net.getNeurons()
         if len(ns) < 2:
             return False,'ind'+str(ind.id)+'添加连接失败：只有一个神经元','addconnection',None
@@ -133,7 +134,7 @@ class NeatMutate:
         return True,'变异操作完成','addconnection',synapse
 
     def __do_mutate_deletenode(self,ind,session):
-        net = ind.getPhenome()
+        net = ind.genome
         ns = net.getHiddenNeurons()
         if collections.isEmpty(ns):
             return False,'','deletenode',None
@@ -142,8 +143,18 @@ class NeatMutate:
         net.remove(neuron)
         return True,'','deletenode',neuron
 
+    def __do_mutate_activationFunction(self,ind,session):
+        net = ind.genome
+        ns = net.getHiddenNeurons()
+        if collections.isEmpty(ns):
+            return False, '', 'modifyactivationFunction', None
+        # 随机选择
+        neuron = choice(ns)
+        activationFunction  = neuron._doSelectActiovationFunction()
+        return True,'','modifyactivationFunction',str(neuron)+':'+activationFunction.nameInfo.name
+
     def __do_mutate_deleteconnection(self,ind,session):
-        net = ind.getPhenome();
+        net = ind.genome
         synapses = net.getSynapses()
         if collections.isEmpty(synapses):
             return False,'','deleteconnection',None
@@ -152,6 +163,8 @@ class NeatMutate:
         net.remove(s)
         session.monitor.recordDebug(NeatMutate.name, 'ind'+str(ind.id)+'删除连接',str(s.id))
         return True, '','deleteconnection', s
+
+
 
     def __doWeightTrain(self,ind,session):
         net = ind.genome

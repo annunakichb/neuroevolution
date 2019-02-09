@@ -86,15 +86,6 @@ class CommonHiddenNeuronModel:
 
         # 取得激活函数
         activationFunctionConfig = neuron.modelConfiguration['activationFunction']
-        activationFunction = neuron.activationFunction
-        if activationFunction is None or not isinstance(activationFunction,ActivationFunction):
-            activationFunctionConfig = neuron.modelConfiguration['activationFunction']
-            if 'range' in activationFunctionConfig.keys:
-                activationFunctionIndex = np.random.uniform(0,len(activationFunctionConfig.selection))
-                activationFunctionName = activationFunctionConfig.range[activationFunctionIndex]
-                neuron.activationFunction = ActivationFunction.find(activationFunctionName)
-            else:
-                neuron.activationFunction = ActivationFunction.find(activationFunctionConfig.name)
         if neuron.activationFunction is None:raise RuntimeError('神经元计算失败(CommonNeuronModel),激活函数无效:'+activationFunctionConfig.name)
 
         # 组合出激活函数参数(参数可能是网络)

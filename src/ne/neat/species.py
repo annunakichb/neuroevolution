@@ -38,7 +38,7 @@ class NeatSpeciesMethod:
             for index,center in enumerate(centroids):
                 species_inds = [ind for i,ind in enumerate(inds) if i in np.argwhere(labels[0]==index)]
                 if collections.isEmpty(species_inds):continue
-                specieId = idgenerator.getSpeciesid(list(map(lambda ind:ind.getPhenome(),species_inds)))
+                specieId = idgenerator.getSpeciesid(list(map(lambda ind:ind.genome,species_inds)))
                 for ind in species_inds:
                     ind.speciedId = specieId
                 sp = Specie(id=specieId,inds = species_inds,pop = session.pop)
@@ -58,7 +58,7 @@ class NeatSpeciesMethod:
         :return:
         '''
         # 取得所有生成过的神经元id和网络id
-        net = ind.getPhenome()
+        net = ind.genome
         inputNeurons = net.getInputNeurons()
         idgenerator = networks.idGenerators.find(session.popParam.genomeDefinition.idGenerator)
         nids = [id for id in idgenerator.getAllCacheNeuronIds() if net.getNeuron(id) not in inputNeurons]
@@ -90,8 +90,8 @@ class NeatSpeciesMethod:
         weight_coefficient = session.popParam.species.weight_coefficient
 
         # 取得个体神经网络和所有神经元以及所有突触
-        net1 = ind1.getPhenome()
-        net2 = ind2.getPhenome()
+        net1 = ind1.genome
+        net2 = ind2.genome
 
         ns1 = net1.getNeurons()
         ns2 = net2.getNeurons()

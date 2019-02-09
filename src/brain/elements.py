@@ -1,6 +1,7 @@
 
 
 import copy
+import numpy as np
 from utils import strs as strs
 from utils import collections as collections
 from utils.properties import Range
@@ -147,7 +148,19 @@ class Neuron(NeuralElement):
         super(Neuron, self).__init__(id,birth,modelConfiguration,coord)
         #super(id,birth,modelConfiguration,coord)
         self.layer = layer
+        if activationFunction is None and 'activationFunction' in modelConfiguration.keys() and  \
+                'selection' in modelConfiguration.activationFunction.keys() and \
+                modelConfiguration.activationFunction.selection is not None:
+            activationFunctionIndex = int(np.random.uniform(0, len(modelConfiguration.activationFunction.selection)))
+            activationFunctionName = modelConfiguration.activationFunction.selection[activationFunctionIndex]
+            activationFunction = ActivationFunction.find(activationFunctionName)
         self.activationFunction = activationFunction if activationFunction is not None else ActivationFunction.find(Neuron.default_activation_function_name)
+
+    def _doSelectActiovationFunction(self):
+        activationFunctionIndex = int(np.random.uniform(0, len(self.modelConfiguration .activationFunction.selection)))
+        activationFunctionName = self.modelConfiguration .activationFunction.selection[activationFunctionIndex]
+        self.activationFunction = ActivationFunction.find(activationFunctionName)
+        return self.activationFunction
 
     def __str__(self):
         #stateStr = collections.dicttostr(self.states)

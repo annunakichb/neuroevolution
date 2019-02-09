@@ -25,18 +25,7 @@ import  domains.ne.cartpoles.policy as policyrunner
 # The following is a complete experiment of the paper "Evolvability Of TWEANN In Dynamic Environment"
 # .
 
-def help(command):
-    if command is None or command == '':
-        print('commands:complexity,sin,dqn,ddqn,neat,hyperneat,policy,quit')
-        return
-    elif str(command).lower() == 'complexity':
-        print('useage:complexity noise=$V file=$filename')
-        print('\t\t\t生成复杂度数据和三维图,当$V为有效数值的时候,表示固定噪音方差缺省是force.py的SIMGA_配置中的最小值')
-        print('\t\t\t                         当$V的值为"interval"的时候,根据force.py的配置生成多个复杂度三维图')
-        print('\t\t\t                         当$V的值为"dimension"的时候,根据force.py的配置高维复杂度数据,不生成三维图')
-        print('\t\t\t                         $filename为np格式的复杂度文件名,缺省为force.npz')
-    elif str(command).lower() == 'dqn':
-        pass
+
 
 def __param_to_dict(params):
     if params is None:
@@ -119,8 +108,9 @@ if __name__ == '__main__':
     while 1:
         user_input = sys.stdin.readline()
         print(user_input)
-        if user_input.strip().lower() == 'quit':
+        if user_input.strip().lower() == 'quit' or user_input.strip().lower() == 'exit':
             break
+
         inputs = user_input.split(' ')
         if len(inputs)<=0:
             help()
@@ -131,9 +121,11 @@ if __name__ == '__main__':
             continue
         params = __param_to_dict(inputs[1:])
 
+        # 显示复杂度曲面
         if command.lower() == 'complexity':
             gc.disable()
             ForceGenerator.compute_all_complex(**params)
+        # 显示几种特殊复杂度曲线
         elif command.strip().lower() == 'sin':
             ps = [{'k':5.,'w':0.,'f':np.pi/2,'sigma':0.},    # 风力为常数
                   {'k':5.,'w':0.,'f':np.pi/2,'sigma':1.01},   # 以5为均值,0.1为方差
@@ -149,6 +141,18 @@ if __name__ == '__main__':
                 plt.plot(ts, samples, 'b')
                 plt.show()
                 subgraphic += 1
+        # 执行neat复杂度-奖励曲线计算过程
+        elif command.strip().lower() == 'neat':
+            neatrunner.run()
+        # 执行hyperneat复杂度-奖励曲线计算过程
+        elif command.strip().lower() == 'hyperneat':
+            hyperneatrunner.run()
+        elif command.strip().lower() == 'dqn':
+            dqnrunner.train()
+        elif command.strip().lower == 'ddqn':
+            ddqnrunner.train()
+
+        # 显示所有算法的复杂度奖励曲线
         elif command.strip().lower() == 'crcurve':
             show_cr_curve()
 

@@ -28,8 +28,8 @@ class NeatCrossmateOperation:
         newinds = []
         count = 0
         for indpair in corssmateinds:
-            net1 = session.pop[indpair[0]].getPhenome()
-            net2 = session.pop[indpair[1]].getPhenome()
+            net1 = session.pop[indpair[0]].genome
+            net2 = session.pop[indpair[1]].genome
             idgenerator = networks.idGenerators.find(net1.definition.idGenerator)
             netid = idgenerator.getNetworkId()
             net = net1.merge(net2,netid,session.curTime)

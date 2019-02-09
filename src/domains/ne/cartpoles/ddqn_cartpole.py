@@ -4,6 +4,8 @@
 import numpy as np
 import tensorflow as tf
 import time
+import os
+import csv
 
 import matplotlib.pyplot as plt
 from domains.ne.cartpoles.enviornment.cartpole import SingleCartPoleEnv
@@ -33,13 +35,29 @@ def train():
     while True:
         # 执行一次
         notdone_count, episode_reward, step, total_step= runner.do_until_done(env,RL.choose_action,total_step,_do_learn)
+        # 记录执行得到的奖励和不倒下次数
+        episode_reward_list.append(episode_reward)
+        episode_notdone_count_list.append(notdone_count)
+        # 每执行100次,打印一下
+        if total_step % 100 == 0 and total_step != 0:
+            print("持续次数=", episode_notdone_count_list, ",平均=", np.average(episode_notdone_count_list))
+            print("累计奖励=", episode_reward_list, ",平均=", np.average(episode_reward_list))
+
         # 判断是否可以提升复杂度
         if notdone_count > env.max_notdone_count or total_step >= 1500:
+            # 记录复杂度和对应获得的奖励(平均还是最大)
             complexes.append(force.force_generator.currentComplex())
-            reward_list.append(np.average(episode_reward_list))
-            notdone_count_list.append(np.average(episode_notdone_count_list))
+            reward_list.append(np.max(episode_reward_list))
+            notdone_count_list.append(np.max(episode_notdone_count_list))
             steps.append(total_step)
             np.save('ddqn_result.npy', (complexes, notdone_count_list, reward_list,steps))
+            print([(f, c) for f, c in zip(complexes, notdone_count_list)])
+
+            # 记录过程记录
+            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\ddqn.csv'
+            out = open(filename, 'a', newline='')
+            csv_write = csv.writer(out, dialect='excel')
+            csv_write.writerow([complexes[-1]]+episode_notdone_count_list)
 
             episode_notdone_count_list,episode_reward_list = [],[]
             total_step = 0
@@ -54,9 +72,7 @@ def train():
                 break  # 复杂度已经达到最大,结束
             print('新的环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (newcomplex, k, w, f, sigma))
         else:
-            if total_step % 100 == 0 and total_step != 0:
-                print("持续次数=", episode_notdone_count_list, ",平均=", np.average(episode_notdone_count_list))
-                print("累计奖励=", episode_reward_list, ",平均=", np.average(episode_reward_list))
+
             episode_reward_list.append(episode_reward)
             if len(episode_reward_list) > 10:
                 episode_reward_list = episode_reward_list[-10:]
