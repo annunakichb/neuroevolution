@@ -205,7 +205,7 @@ def dicttostr(dict,**props):
 
 # 计算list的平均值，最大和最小
 def rangefeature(list):
-    if isEmpty(list):return 0.0
+    if isEmpty(list):return 0.0,0.,0.
     sum = reduce(lambda x,y:x+y,list)
     stdev = np.std(list, ddof=1)
     return max(list),sum / len(list),min(list),stdev

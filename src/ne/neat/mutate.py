@@ -8,9 +8,14 @@ from brain.elements import Synapse
 from brain.runner import NeuralNetworkTask
 from utils.properties import Range
 import utils.collections as collections
-
+from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor,as_completed,wait,ALL_COMPLETED,FIRST_COMPLETED
 
 __all__ = ['NeatMutate']
+
+def parallel_doWeightTrain_wrapper(neatNutate,ind,session):
+    neatNutate.__doWeightTrain(ind,session)
+    return True
 
 class NeatMutate:
     name = 'neat_mutate'
@@ -39,16 +44,22 @@ class NeatMutate:
                 raise RuntimeError('对个体计算模型的变异还没有实现')
             #if session.runParam.mutate.activation.rate > 0:
             #    raise RuntimeError('对个体激活函数的变异还没有实现')
-
-
             succ,msg,oper,obj = self.__domutate(session.pop[mutateid], session)
             if succ:
                 if oper not in mutateStat.keys():mutateStat[oper] = 0
                 mutateStat[oper] = mutateStat[oper] + 1
 
         # 对每个个体的权重进行随机变化
-        for ind in session.pop.inds:
-            self.__doWeightTrain(ind,session)
+        parallel = session.runParam.mutate.weight.parallel
+        if parallel is not None and parallel > 0:
+            pool = ThreadPoolExecutor(max_workers=parallel)
+            all_task = []
+            for ind in session.pop.inds:
+                all_task.append(pool.submit(self.__doWeightTrain, ind, session))
+            wait(all_task, return_when=ALL_COMPLETED)
+        else:
+            for ind in session.pop.inds:
+                self.__doWeightTrain(ind,session)
 
         resultMsg = reduce(lambda x,y:x+","+y,map(lambda key:key + "数量=" + str(mutateStat[key]),mutateStat)) if len(mutateStat)>0 else '无有效变异'
         return True,resultMsg,None

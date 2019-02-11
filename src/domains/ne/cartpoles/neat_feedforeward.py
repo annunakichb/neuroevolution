@@ -17,7 +17,7 @@ import domains.ne.cartpoles.enviornment.force as force
 import domains.ne.cartpoles.enviornment.runner as runner
 from brain.viewer import NetworkView
 
-env = SingleCartPoleEnv()
+
 
 
 def fitness(ind,session):
@@ -27,7 +27,7 @@ def fitness(ind,session):
     :param session:
     :return:
     '''
-
+    env = SingleCartPoleEnv()
     net = ind.getPhenome()
     reward_list, notdone_count_list = runner.do_evaluation(2,env,net.activate)
 
@@ -37,6 +37,7 @@ fitness_records = []
 complex_records=[]
 maxfitness_records = []
 epochcount = 0
+env = SingleCartPoleEnv()
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
     callbacks.neat_callback(event,monitor)
@@ -72,7 +73,7 @@ def callback(event,monitor):
             netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
 
             # 提升复杂度
-            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(5.0)
+            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(20.0)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
             else:
@@ -168,10 +169,11 @@ def run():
         },
         'log':{
             'individual' : 'elite',                                 # 日志中记录个体方式：记录所有个体，可以选择all,elite,maxfitness（缺省）,custom
-            'debug': False                                        # 是否输出调试信息
+            'debug': False,                                        # 是否输出调试信息
+            'file': 'neat_cartpole.log'                            # 日志文件名
         },
         'evalate':{
-            'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选
+            'parallel':50,                                         # 并行执行评估的线程个数，缺省0，可选
         },
         'operations':{
             #'method' : 'neat',                                   # 已有的进化操作序列名称，与text两个只用一个
@@ -179,6 +181,7 @@ def run():
         },
         'mutate':{
             'propotion' : 0.1,                                      # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
+            'parallel': 0,  # 并行执行变异的线程个数，缺省0，可选
             'model':{
                 'rate' : 0.0,                                     # 模型变异比例
                 'range' : ''                                      # 可选的计算模型名称，多个用逗号分开，缺省是netdef中所有模型
@@ -194,6 +197,7 @@ def run():
                 'deleteconnection':0.1                            # 删除连接的概率
             },
             'weight':{
+                'parallel': 50,  # 并行执行权重变异的线程个数，缺省0，可选
                 'epoch':3,                                          # 权重调整次数
             }
         }

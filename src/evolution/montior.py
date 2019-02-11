@@ -21,6 +21,10 @@ class Monitor:
     def __init__(self,evoTask,callback=None):
         self.evoTask = evoTask
         self.operationResult = {}
+        self.logfilename = self.evoTask.runParam.log.file
+        if self.logfilename is None or self.logfilename == '':
+            self.logfilename = 'evolution.log'
+
         self.logger = self.__createLogger()
         self.callback = callback
         self.debugEnabled = self.evoTask.runParam.log.debug
@@ -39,7 +43,7 @@ class Monitor:
         logger = logging.getLogger('monitor')
         logger.setLevel(logging.DEBUG)
 
-        f_handler = logging.FileHandler('evolution.log')
+        f_handler = logging.FileHandler(self.logfilename)
         f_handler.setLevel(logging.DEBUG)
         f_handler.setFormatter(logging.Formatter(LOG_FORMAT))
         logger.addHandler(f_handler)

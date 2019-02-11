@@ -229,7 +229,23 @@ class Properties(dict):
             return Properties(value)
         return value
 
+    def __getstate__(self):
+        """Return state values to be pickled."""
+        dicts = {}
+        for key in self.keys():
+            value = self[key]
+            if isinstance(value, Properties):
+                value = value.__getstate__()
+            dicts[key] = value
+        return dicts
+
+    def __setstate__(self, state):
+        """Restore state from the unpickled state values."""
+        dicts = state
+        for key in dicts:
+            self[key] = dicts[key]
 
 
 
-#endregion
+
+        #endregion

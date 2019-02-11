@@ -99,7 +99,15 @@ class NeatSelection():
         # 选择候选变异个体（精英个体将被排除）
         candidateInds = collections.findall(session.pop.inds,lambda ind:ind not in session.pop.eliest)
         # 为每个个体计算一个选择概率（适应度越低的被选择的概率就高）
-        max,avg,min,stdev = collections.rangefeature(list(map(lambda ind:ind['fitness'],candidateInds)))
+        if len(candidateInds) <=0:
+            max, avg, min, stdev = 0.,0.,0.,0.
+            print('变异个体数量无效,'+str(session.pop.eliest))
+            return True, '选择操作完成,其中淘汰个体数量=' + str(len(removeIndids)) + ',交叉个体数量=' + str(
+                len(corssmeateInds)) + ',变异个体数量=0', (
+                   corssmeateInds, [])
+
+        else:
+            max,avg,min,stdev = collections.rangefeature(list(map(lambda ind:ind['fitness'],candidateInds)))
         #fitnesssum = sum(list(map(lambda ind:ind['fitness'],candidateInds)))
         mutateSelProb = [1-((ind['fitness']-min)/((max-min) if max != min else 1)) for index,ind in enumerate(candidateInds)]
         mutateSelProb = np.array(mutateSelProb)

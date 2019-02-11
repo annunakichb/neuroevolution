@@ -1,5 +1,5 @@
 from multiprocessing import Pool
-
+from concurrent.futures import ThreadPoolExecutor,as_completed,wait,ALL_COMPLETED,FIRST_COMPLETED
 from evolution.env import EvaluationValue
 
 from utils.properties import Registry
@@ -109,7 +109,9 @@ class Individual:
 
 #region 种群信息
 def doIndEvaulate_warpper(pop,ind,key,evoluator,session):
-    pop.__doIndEvaulate(ind,key,evoluator,session)
+    print('doIndEvaulate_warpper of ' + str(ind.id))
+    return pop.__doIndEvaulate(ind,key,evoluator,session)
+
 
 class Population:
     __slots__ = ['params','inds','features','eliest','species']
@@ -156,15 +158,13 @@ class Population:
         # 遍历每一个评估项
         for key,evoluator in self.params.features.items():
             # 对每一个个体计算评估值
-            if session.runParam.evalate.parallel>0:
-                pool = Pool(session.runParam.evalate.parallel)
-                for x in range(session.runParam.evalate.parallel):
-                    tr = pool.apply_async(doIndEvaulate_warpper, (self,self.inds[x], key, evoluator, session))
-                    print(tr.get())
-                #collections.foreach(self.inds,lambda ind: jobs.append(pool.apply_async(self.__doIndEvaulate, (ind, key,evoluator,session))))
-                pool.close()
-                pool.join()
-
+            parallel = session.runParam.evalate.parallel
+            if parallel is not None and parallel>0:
+                pool = ThreadPoolExecutor(max_workers=parallel)
+                all_task = []
+                for ind in self.inds:
+                    all_task.append(pool.submit(self.__doIndEvaulate,ind, key, evoluator, session))
+                wait(all_task,return_when=ALL_COMPLETED)
             else:
                 for ind in self.inds:
                     value = evoluator.calacute(ind,session)
@@ -189,6 +189,7 @@ class Population:
     def __doIndEvaulate(self,ind,key,evoluator,session):
         value = evoluator.calacute(ind, session)
         ind[key] = value
+        return value
 
     def __getitem__(self, item):
         '''
