@@ -150,12 +150,13 @@ def execute(xh=None,mode='noreset'):
             # 记录复杂度和对应获得的奖励
             complexes.append(force.force_generator.currentComplex())
             notdone_count_list.append(np.max(episode_notdone_count_list))
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\policy' + str(xh) + '.npy'
-            np.save(filename, (complexes, notdone_count_list))
+            #filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\policy' + str(xh) + '.npy'
+            #np.save(filename, (complexes, notdone_count_list))
             print([(f, c) for f, c in zip(complexes, notdone_count_list)])
 
             # 记录过程记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\policy' + str(xh) + '.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                       'policy' + os.sep + 'policy' + str(xh) + '.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complexes[-1]]+episode_notdone_count_list)
@@ -186,9 +187,10 @@ def execute(xh=None,mode='noreset'):
 
 
 if __name__ == '__main__':
+    force.init()
+
     for i in range(10):
-        force.force_generator = force.ForceGenerator(k=49.15, w=-0.86, f=0.0, sigma=1.01)
-        run(mode='reset', maxepochcount=1000, complexunit=100.,xh=i)
+        run(mode='noreset', maxepochcount=2000, complexunit=20.,xh=i)
         env = SingleCartPoleEnv().unwrapped
         net = PolicyNet()
         #force.force_generator = force.ForceGenerator(0.0, 0.0, 0.0, 1.01)

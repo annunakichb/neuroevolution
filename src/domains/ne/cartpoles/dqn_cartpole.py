@@ -69,7 +69,8 @@ def execute(xh=None,mode='noreset'):
             print([(f, c) for f, c in zip(complexes, notdone_count_list)])
 
             # 记录过程记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas' + os.sep + 'dqn' + str(xh) + '.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_'+mode + os.sep + 'dqn' + \
+                       os.sep + 'dqn' + str(xh) + '.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complexes[-1]]+episode_notdone_count_list)
@@ -117,7 +118,7 @@ if __name__ == '__main__':
     force.init()
 
     for i in range(10):
-        run(mode='noreset', maxepochcount=1000, complexunit=20.,xh=i)
+        run(mode='reset', maxepochcount=1000, complexunit=100.,xh=i)
         env = SingleCartPoleEnv().unwrapped
         RL = DeepQNetwork(n_actions=env.action_space.n,
                           n_features=env.observation_space.shape[0])

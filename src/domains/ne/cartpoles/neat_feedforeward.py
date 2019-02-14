@@ -29,9 +29,9 @@ def fitness(ind,session):
     '''
     env = SingleCartPoleEnv()
     net = ind.getPhenome()
-    reward_list, notdone_count_list = runner.do_evaluation(2,env,net.activate)
+    reward_list, notdone_count_list = runner.do_evaluation(1,env,net.activate)
 
-    return min(notdone_count_list)
+    return max(notdone_count_list)
 
 fitness_records = []
 complex_records=[]
@@ -61,19 +61,20 @@ def callback(event,monitor):
             fitness_records.append(maxfitness)
             complex_records.append(force.force_generator.currentComplex())
             print([(f, c) for f, c in zip(complex_records, fitness_records)])
-            np.save('neat_result', (complex_records, fitness_records))
+            #np.save('neat_result', (complex_records, fitness_records))
 
             # 保存过程中每一步的最大适应度记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\neat.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                    'neat' + os.sep + 'neat.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complex_records[-1]]+maxfitness_records)
             maxfitness_records.clear()
 
             # 保存最优基因网络拓扑
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\neat_ind' + str(
-                maxfitness_ind.id) + '_' + \
-                       str(maxfitness) + '_' + str(complex_records[-1]) + '.svg'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                    'neat' + os.sep + str(complex_records[-1]) + '_neat_ind' + str(maxfitness_ind.id) + '_' + \
+                       str(maxfitness) + '.svg'
             netviewer = NetworkView()
             netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
 
@@ -235,5 +236,5 @@ def execute():
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':
-
-    run(mode='reset',maxepochcount=30,complexunit=100.)
+    force.init()
+    run(mode='noreset',maxepochcount=30,complexunit=20.)

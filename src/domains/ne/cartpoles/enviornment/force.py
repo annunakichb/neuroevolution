@@ -507,6 +507,7 @@ def init():
     print('加载复杂度数据...')
     ForceGenerator.load_complex(sigma=1.01)
     force_generator = ForceGenerator(0.0,0.0,0.0,1.01)
+    return force_generator
 
 #region 高维复杂度
 def createHighDimensionComplexFile():

@@ -9,7 +9,7 @@ from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
 from brain.runner import NeuralNetworkTask
-import brain.networks as networks
+#import brain.networks as networks
 
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']

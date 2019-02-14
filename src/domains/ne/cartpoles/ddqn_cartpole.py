@@ -63,12 +63,14 @@ def execute(xh=None,mode='noreset'):
             reward_list.append(np.max(episode_reward_list))
             notdone_count_list.append(np.max(episode_notdone_count_list))
             steps.append(total_step)
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\ddqn' + str(xh) + '.npy'
-            np.save(filename, (complexes, notdone_count_list, reward_list,steps))
+            #filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+            #           'ddqn' + os.sep + 'ddqn' + str(xh) + '.npy'
+            #np.save(filename, (complexes, notdone_count_list, reward_list,steps))
             print([(f, c) for f, c in zip(complexes, notdone_count_list)])
 
             # 记录过程记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\ddqn' + str(xh) + '.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                       'ddqn' + os.sep + 'ddqn' + str(xh) + '.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complexes[-1]]+episode_notdone_count_list)
@@ -121,6 +123,8 @@ def run(**kwargs):
     execute(xh, mode)
 
 if __name__ == '__main__':
+    force.init()
+
     for i in range(10):
         run(mode='reset', maxepochcount=1000, complexunit=100.,xh=i)
         env = SingleCartPoleEnv().unwrapped
