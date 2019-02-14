@@ -106,7 +106,7 @@ class ForceGenerator():
                     if k == self.k and w == self.w:
                         continue
                     complex = self.find_complex(k,w,self.f,self.sigma)
-                    if complex is None or complex > maxcomplex:
+                    if complex is None or maxcomplex is None or complex > maxcomplex:
                         maxcomplex = complex
                         maxk,maxw = k,w
                         changed = True

@@ -40,6 +40,7 @@ class DeepQNetwork:
         self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
 
         # consist of [target_net, evaluate_net]
+        tf.reset_default_graph()
         self._build_net()
 
         t_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_net')

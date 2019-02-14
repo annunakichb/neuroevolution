@@ -15,6 +15,8 @@ learning_rate = 1e-1
 
 class PolicyNet:
     def __init__(self):
+
+
         # 输入层
         self.input_dimension = 4
         self.var_input_x = tf.placeholder(tf.float32, [None, self.input_dimension], name="input_x")
@@ -50,15 +52,13 @@ class PolicyNet:
         theta = x[0][2]
         return 0 if theta > 0 else 1
 
-
-
-
-
 env = SingleCartPoleEnv().unwrapped
-
-
-
 net = PolicyNet()
+
+mode = 'noreset'
+maxepochcount = 1000
+complexunit = 20.
+
 def _dountilpoledown(session):
     # 反复执行直到杆子倒下
     notdone_count = 0
@@ -87,20 +87,24 @@ def _dountilpoledown(session):
     reward_records = [1.0 / len(input_x_records) for t in input_x_records]
     return notdone_count,input_x_records,input_y_records,reward_records,step
 
-def initsession():
-    # 初始化
-    session = tf.Session()
-    init = tf.global_variables_initializer()
-    session.run(init)
-    observation = env.reset()
-    gradBuff = session.run(net.tvars)
-    for ix, grad in enumerate(gradBuff):
-        gradBuff[ix] = grad * 0
 
-    episode_number = 0
-    episode_notdone_count_list = []
 
-def run():
+def run(**kwargs):
+    global mode
+    global maxepochcount
+    global complexunit
+    global env
+    global net
+
+    mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
+    maxepochcount = 1000 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
+    complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+    xh = None if 'xh' not in kwargs.keys() else int(kwargs['xh'])
+
+    execute(xh,mode)
+
+def execute(xh=None,mode='noreset'):
+    global env
     global  net
     complexes = []
     notdone_count_list = []
@@ -116,6 +120,11 @@ def run():
 
     episode_number = 0
     episode_notdone_count_list = []
+
+    if xh is None or str(int(xh)) == '':
+        xh = ''
+    else:
+        xh = "_" + str(int(xh))
     while True:
         # 执行一次
         notdone_count,input_x_records,input_y_records,reward_records,step = _dountilpoledown(session)
@@ -137,22 +146,23 @@ def run():
         #if episode_number % 100 == 0 and episode_number != 0:
         #    print("持续次数=", episode_notdone_count_list, ",平均=", np.average(episode_notdone_count_list))
 
-        if notdone_count > env.max_notdone_count or episode_number >= 15:
+        if notdone_count > env.max_notdone_count or episode_number >= maxepochcount:
             # 记录复杂度和对应获得的奖励
             complexes.append(force.force_generator.currentComplex())
             notdone_count_list.append(np.max(episode_notdone_count_list))
-            np.save('policy_result.npy', (complexes, notdone_count_list))
+            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\policy' + str(xh) + '.npy'
+            np.save(filename, (complexes, notdone_count_list))
             print([(f, c) for f, c in zip(complexes, notdone_count_list)])
 
             # 记录过程记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\police.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\policy' + str(xh) + '.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complexes[-1]]+episode_notdone_count_list)
             episode_notdone_count_list = []
 
             # 升级复杂度,为了加快执行速度,让复杂度增加幅度至少大于min_up
-            changed, newcomplex, k, w, f, sigma = force.force_generator.promptComplex(5.0)
+            changed, newcomplex, k, w, f, sigma = force.force_generator.promptComplex(complexunit)
             if not changed or newcomplex is None:
                 break  # 复杂度已经达到最大,结束
             print('新的环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (newcomplex, k, w, f, sigma))
@@ -167,8 +177,19 @@ def run():
 
             episode_number = 0
             #episode_notdone_count_list = []
+            if mode == 'reset':
+                env = SingleCartPoleEnv().unwrapped
+                net = PolicyNet()
 
+    tf.reset_default_graph()
     session.close()
 
+
 if __name__ == '__main__':
-    run()
+    for i in range(10):
+        force.force_generator = force.ForceGenerator(k=49.15, w=-0.86, f=0.0, sigma=1.01)
+        run(mode='reset', maxepochcount=1000, complexunit=100.,xh=i)
+        env = SingleCartPoleEnv().unwrapped
+        net = PolicyNet()
+        #force.force_generator = force.ForceGenerator(0.0, 0.0, 0.0, 1.01)
+

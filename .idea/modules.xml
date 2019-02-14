@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/neuroevolution.iml" filepath="$PROJECT_DIR$/.idea/neuroevolution.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../rl/.idea/rl.iml" filepath="$PROJECT_DIR$/../rl/.idea/rl.iml" />
     </modules>
   </component>
 </project>

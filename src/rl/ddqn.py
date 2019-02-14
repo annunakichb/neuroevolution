@@ -36,6 +36,8 @@ class DDeepQNetwork(object):          #首先创建一个模型类
         self.use_e_greedy_increment = use_e_greedy_increment
         self.learn_step_counter = 0
         self.memory = np.zeros((self.memory_size, self.n_features * 2 + 2))
+
+        tf.reset_default_graph()
         self.build_net()
         # 这里获取eval_net的神经网络参数
         e_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='eval_net')

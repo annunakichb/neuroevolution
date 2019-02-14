@@ -75,9 +75,10 @@ def do_action(env,observation,step,action_method):
     :return: (observation_, reward, done, info,action)
     '''
     # 执行策略
+    env.wind = force.force_generator.next(step * env.tau)
+    #input_observation = observation + (env.wind,)
     action = action_method(observation)
     action = 1 if action > 0.5 else 0
-    env.wind = force.force_generator.next(step * env.tau)
     observation_, reward, done, info = env.step(action)
 
     # x是车的水平位移，theta是杆离垂直的角度

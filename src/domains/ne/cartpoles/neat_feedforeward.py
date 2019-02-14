@@ -36,14 +36,19 @@ def fitness(ind,session):
 fitness_records = []
 complex_records=[]
 maxfitness_records = []
-epochcount = 0
 env = SingleCartPoleEnv()
+mode = 'noreset'
+epochcount = 0
+maxepochcount = 10
+complexunit = 20.
+
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
     callbacks.neat_callback(event,monitor)
     global epochcount
+    global  mode
     if event == 'epoch.end':
-        #gc.collect()
+        gc.collect()
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
         maxfitness_ind = monitor.evoTask.curSession.pop.inds[0]
         maxfitness_records.append(maxfitness)
@@ -51,12 +56,12 @@ def callback(event,monitor):
         # 如果最大适应度达到了env.max_notdone_count（说明对当前环境已经产生适应），或者进化迭代数超过10次（当前环境下适应达到最大）
         # 则提升复杂度
         epochcount += 1
-        if maxfitness >= env.max_notdone_count or epochcount >= 10:
+        if maxfitness >= env.max_notdone_count or epochcount >= maxepochcount:
             # 保存复杂度和对应最大适应度记录
             fitness_records.append(maxfitness)
             complex_records.append(force.force_generator.currentComplex())
             print([(f, c) for f, c in zip(complex_records, fitness_records)])
-            np.save('neat_result', complex_records, fitness_records)
+            np.save('neat_result', (complex_records, fitness_records))
 
             # 保存过程中每一步的最大适应度记录
             filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\neat.csv'
@@ -73,25 +78,47 @@ def callback(event,monitor):
             netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
 
             # 提升复杂度
-            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(20.0)
+            changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(complexunit)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
+                if mode == 'reset':
+                    monitor.evoTask.curSession.runParam.terminated.maxIterCount = epochcount-1
+
             else:
                 np.save('neat_result', complex_records, fitness_records)
                 #plt.plot(complex_records, reward_list, label='reward')
                 plt.plot(complex_records, fitness_records, label='times')
                 plt.xlabel('complexes')
                 plt.savefig('./neat_cartpole.png')
+                return
 
             epochcount = 0
-
-
     elif event == 'session.end':
         filename = 'singlecartpole.session.'+ str(monitor.evoTask.curSession.taskxh)+'.mov'
         eliest = monitor.evoTask.curSession.pop.eliest
-        #cartpole.make_movie(eliest[0].getPhenome(),filename)
 
-def run():
+
+def run(**kwargs):
+    global mode
+    global maxepochcount
+    global complexunit
+
+    mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
+    maxepochcount = 10 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
+    complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+
+    while True:
+        execute()
+        if mode == 'reset':
+            continue
+        break
+
+
+def execute():
+    '''
+    执行
+    :return:
+    '''
     # 初始化neat算法模块
     neat.neat_init()
 
@@ -102,7 +129,7 @@ def run():
     # 定义网络
     netdef = {
         'netType' : NetworkType.Perceptron,                       # NetworkType，网络类型,必须
-        'neuronCounts' : [4,1],                                   # list（初始）网络各层神经元数量,必须
+        'neuronCounts' : [5,1],                                   # list（初始）网络各层神经元数量,必须
         'idGenerator' :  'neat',                                  # str 生成网络，神经元，突触id的类，参见DefauleIDGenerator,list idgenerator命令可以列出所有的id生成器对象
         'config' : {
             'layered' : True,                                     # bool 是否分层,可选
@@ -207,10 +234,6 @@ def run():
     evolutionTask = EvolutionTask(1,popParam,callback)
     evolutionTask.execute(runParam)
 
-
-
-
-
-
 if __name__ == '__main__':
-    run()
+
+    run(mode='reset',maxepochcount=30,complexunit=100.)
