@@ -130,7 +130,7 @@ def execute():
     # 定义网络
     netdef = {
         'netType' : NetworkType.Perceptron,                       # NetworkType，网络类型,必须
-        'neuronCounts' : [5,1],                                   # list（初始）网络各层神经元数量,必须
+        'neuronCounts' : [4,1],                                   # list（初始）网络各层神经元数量,必须
         'idGenerator' :  'neat',                                  # str 生成网络，神经元，突触id的类，参见DefauleIDGenerator,list idgenerator命令可以列出所有的id生成器对象
         'config' : {
             'layered' : True,                                     # bool 是否分层,可选
