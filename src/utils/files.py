@@ -1,4 +1,4 @@
-import os,path
+import os
 import utils.strs as strs
 import utils.collections as collections
 from functools import reduce

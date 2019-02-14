@@ -141,6 +141,29 @@ class ForceGenerator():
         if windex == -1 or kindex == -1:
             return None
         return C[windex][kindex]
+
+    def find_var_by_complex(self,sigma,complex,error=3.0):
+        '''
+        寻找复杂度大于complex中最小的那几个
+        :param complex:
+        :param error 与complex差error的都可以
+        :return:
+        '''
+        if ForceGenerator.comples_dimension == 4:
+            raise RuntimeError('未实现')
+        if sigma not in ForceGenerator.Complexity.keys():
+            ForceGenerator.load_complex(sigma)
+        K, W, C = ForceGenerator.Complexity[sigma]
+
+        indexs = []
+        for i in range(len(C)):
+            for j,c in enumerate(C[i]):
+                if c - complex > 0 and c - complex <= error:
+                    k = K[0][j]
+                    w = W[i][0]
+                    indexs.append([c,k,w])
+        return indexs
+
     #endregion
 
 
@@ -156,6 +179,20 @@ class ForceGenerator():
         curcomplex = self.find_complex(self.k,self.w,self.f,self.sigma)
         changed = False
 
+        if min_up <= 0:
+            min_up += 1.0
+        destcomplex = curcomplex + min_up
+
+        varindex  = self.find_var_by_complex(self.sigma,destcomplex,error=3.0)
+        if varindex is None or len(varindex)<=0:
+            return False, curcomplex, self.k, self.w, self.f, self.sigma
+        index = np.random.choice(len(varindex))
+        r = varindex[index]
+        complex, self.k, self.w = r[0], r[1], r[2]
+        return True, complex, self.k, self.w, self.f, self.sigma
+
+
+        '''
         count = 1
 
         records = {}  # 找过的记录，避免重复寻找
@@ -164,10 +201,12 @@ class ForceGenerator():
                            ForceGenerator.K_STEP)
             ks[ks < ForceGenerator.K_MIN] = ForceGenerator.K_MIN
             ks[ks > ForceGenerator.K_MAX] = ForceGenerator.K_MAX
+            ks = list(set(ks))
             ws = np.arange(self.w - ForceGenerator.OMEGE_STEP * count, self.w + ForceGenerator.OMEGE_STEP * (count+1),
                            ForceGenerator.OMEGE_STEP)
             ws[ws < ForceGenerator.OMEGE_MIN] = ForceGenerator.OMEGE_MIN
             ws[ws > ForceGenerator.OMEGE_MAX] = ForceGenerator.OMEGE_MAX
+            ws = list(set(ws))
 
             result = []
 
@@ -187,6 +226,7 @@ class ForceGenerator():
                                ForceGenerator.SIGMA_STEP)
                 ss[ss < ForceGenerator.SIGMA_MIN] = ForceGenerator.SIGMA_MIN
                 ss[ss > ForceGenerator.SIGMA_MAX] = ForceGenerator.SIGMA_MAX
+                ss = list(set(ss))
                 for k in ks:
                     for w in ws:
                         for s in ss:
@@ -209,6 +249,10 @@ class ForceGenerator():
             curcomplex,self.k,self.w,self.f,self.sigma = r[0],r[1],r[2],r[3],r[4]
             return True,curcomplex,self.k,self.w,self.f,self.sigma
         return False,curcomplex,self.k,self.w,self.f,self.sigma
+        '''
+
+
+
 
     #endregion
 
@@ -505,8 +549,10 @@ def test3DcomplexPrompt():
     '''
     ForceGenerator.load_complex(sigma=1.01)
     force_generator = ForceGenerator(0.0, 0.0, 0.0, 1.01)
-    for i in range(100):
-        changed, maxcomplex, k, w, f, sigma = force_generator.promptComplex(5.0)
+    while 1:
+        changed, maxcomplex, k, w, f, sigma = force_generator.promptComplex(20.0)
+        if not changed:
+            return
         print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k, w, f, sigma))
 
 def testShow3DComplex():

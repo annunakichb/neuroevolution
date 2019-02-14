@@ -1,7 +1,6 @@
 import json
 import time
 import  logging
-from prompt_toolkit.shortcuts import get_input
 from prompt_toolkit import Application
 from prompt_toolkit.completion import Completer
 from pygments.lexers import sql
