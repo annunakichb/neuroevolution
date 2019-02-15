@@ -6,8 +6,8 @@ import numpy as np
 from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.contrib.completers import WordCompleter
-import click
+#from prompt_toolkit.contrib.completers import WordCompleter
+#import click
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import  gc
@@ -130,7 +130,8 @@ def createavgcomplex(alg,mode='noreset',count=10):
     datas = []
     complex_len_max,rewardlist_len_max = 0,0
     for i in range(count):
-        file = os.path.split(os.path.realpath(__file__))[0] + "\\datas_" + mode + "\\" + alg.strip() + "_" + str(int(i)) +".csv"
+        file = os.path.split(os.path.realpath(__file__))[0] + os.sep + "datas_" + mode + os.sep + \
+               alg.strip() + os.sep + alg.strip() + "_" + str(int(i)) +".csv"
         complexity, _, rewardlist = loadcomplex(alg,mode,step=0.,file=file)
         datas.append((complexity,rewardlist))
         if complex_len_max < len(complexity):
@@ -165,7 +166,7 @@ def createavgcomplex(alg,mode='noreset',count=10):
                 rlist.append(sum /num)
         rs.append([complexityes[i]]+rlist)
 
-    filename = os.path.split(os.path.realpath(__file__))[0] + "\\datas_" + mode + "\\" + alg.strip() + ".csv"
+    filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + "datas_" + mode + os.sep + alg.strip() + ".csv"
     out = open(filename, 'w', newline='')
     out.truncate()
     csv_write = csv.writer(out, dialect='excel')
