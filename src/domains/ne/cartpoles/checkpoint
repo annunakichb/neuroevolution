@@ -1,0 +1,2 @@
+model_checkpoint_path: "DDQN_train.model"
+all_model_checkpoint_paths: "DDQN_train.model"
