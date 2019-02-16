@@ -161,8 +161,8 @@ class ForceGenerator():
                 if c - complex > 0 and c - complex <= error:
                     k = K[0][j]
                     w = W[i][0]
-                    if self.w == 0 or (w > 0. and self.w > 0) or (w<0. and self.w < 0):
-                        indexs.append([c,k,w])
+                    #if self.w == 0 or (w > 0. and self.w > 0) or (w<0. and self.w < 0):
+                    indexs.append([c,k,w])
         return indexs
 
     #endregion
