@@ -194,7 +194,7 @@ if __name__ == '__main__':
     force.init()
 
     for i in range(10):
-        kwargs = {'mode': 'reset', 'xh':i,'maxepochcount' : 500,'complexunit':100.0}
+        kwargs = {'mode': 'noreset', 'xh':i,'maxepochcount' : 500,'complexunit':20.0}
         env = SingleCartPoleEnv().unwrapped
         net = PolicyGradients()
         while 1:

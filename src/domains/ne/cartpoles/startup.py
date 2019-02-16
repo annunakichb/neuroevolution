@@ -254,7 +254,6 @@ if __name__ == '__main__':
                     createavgcomplex(name,mode='noreset',count=10)
                 if mode == '' or mode.__contains__('reset'):
                     createavgcomplex(name,mode='reset',count=10)
-
         # 显示所有算法的复杂度奖励曲线
         elif command.strip().lower() == 'crcurve':
             algs = ['neat', 'hyperneat', 'dqn', 'ddqn', 'policy']
