@@ -157,7 +157,10 @@ def createavgcomplex(alg,mode='noreset',count=10):
         for j in range(rewardlist_len_max):
             num, sum = 0, 0.
             for k in range(len(datas)):
-                rewardlist = datas[k][1][i]
+                datafiles_rewards = datas[k][1]
+                if i >= len(datafiles_rewards):
+                    continue
+                rewardlist = datafiles_rewards[i]
                 if j >= len(rewardlist):
                     continue
                 sum += rewardlist[j]
