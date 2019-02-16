@@ -83,7 +83,7 @@ class SingleCartPoleEnv(gym.Env):
         self.steps_beyond_done = None
 
         self.wind = 0.
-        self.max_notdone_count = 200  # 最大连续不倒step数,如tau=0.05,则1200*0.05=60秒
+        self.max_notdone_count = 150  # 最大连续不倒step数,如tau=0.05,则1200*0.05=60秒
 
 
     def seed(self, seed=None):

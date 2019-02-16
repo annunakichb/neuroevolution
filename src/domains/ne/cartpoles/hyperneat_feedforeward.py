@@ -43,7 +43,7 @@ def fitness(ind,session):
     net = ind.getPhenome()
     reward_list, notdone_count_list = runner.do_evaluation(1,env,net.activate)
 
-    return min(notdone_count_list)
+    return max(notdone_count_list)
 
 env = SingleCartPoleEnv()
 fitness_records = []
@@ -77,14 +77,16 @@ def callback(event,monitor):
             np.save('hyperneat_result', (complex_records, fitness_records))
 
             # 保存过程中每一步的最大适应度记录
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\hyperneat.csv'
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                    'hyperneat' + os.sep + 'hyperneat.csv'
             out = open(filename, 'a', newline='')
             csv_write = csv.writer(out, dialect='excel')
             csv_write.writerow([complex_records[-1]]+maxfitness_records)
             maxfitness_records.clear()
 
             # 保存最优基因网络拓扑
-            filename = os.path.split(os.path.realpath(__file__))[0] + '\\datas\\hyperneat_' + str(complex_records[-1]) + '_ind' + str(maxfitness_ind.id) + '_' + \
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                    'hyperneat'+os.sep + 'hyperneat_' + str(complex_records[-1]) + '_ind' + str(maxfitness_ind.id) + '_' + \
                        str(maxfitness) + '.svg'
             netviewer = NetworkView()
             netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
@@ -301,4 +303,5 @@ def execute():
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':
+    force.init()
     run(mode='noreset', maxepochcount=20, complexunit=20.)

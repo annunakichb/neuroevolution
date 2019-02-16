@@ -237,4 +237,4 @@ def execute():
     gc.enable()
 if __name__ == '__main__':
     force.init()
-    run(mode='noreset',maxepochcount=30,complexunit=20.)
+    run(mode='noreset',maxepochcount=20,complexunit=20.)

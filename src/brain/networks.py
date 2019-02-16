@@ -161,7 +161,7 @@ class NeuralNetwork:
         while len(self.neurons) <= layerIndex:
             self.neurons.insert(layerIndex, [])
         # 生成神经元坐标
-        idGenerator = networks.idGenerators.find(self.definition.idGenerator)
+        idGenerator = idGenerators.find(self.definition.idGenerator)
         coords = self.__createCoord(layer, count)
 
         # 创建神经元
