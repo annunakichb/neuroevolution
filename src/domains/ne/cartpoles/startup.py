@@ -10,6 +10,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 #import click
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import  gc
 import os
 import csv
@@ -211,25 +212,59 @@ if __name__ == '__main__':
         params = __param_to_dict(inputs[1:])
 
         # 显示复杂度曲面
-        if command.lower() == 'complexity':
-            gc.disable()
+        if command.lower() == 'createcomplexity':
             ForceGenerator.compute_all_complex(**params)
         # 显示几种特殊复杂度曲线
         elif command.strip().lower() == 'sin':
             ps = [{'k':5.,'w':0.,'f':np.pi/2,'sigma':0.},    # 风力为常数
                   {'k':5.,'w':0.,'f':np.pi/2,'sigma':1.01},   # 以5为均值,0.1为方差
-                  {'k':1.,'w':0.01,'f':0,'sigma':1.01},      # 近线性增长的数据          #
-                  {'k':5.,'w':5.,'f':0,'sigma':1.01}         # 周期性数据
+                  {'k':10.,'w':0.5,'f':0,'sigma':1.01},      # 近线性增长的数据          #
+                  {'k':5.,'w':5.,'f':0,'sigma':0.},         # 周期性数据
+                  {'k': 5., 'w': 5., 'f': 0, 'sigma': 1.01}  # 周期性数据
                  ]
-            subgraphic = 221
-            for p in ps:
+            titles = ['(a)','(b)','(c)','(d)','(e)']
+            subgraphic = 231
+            for i,p in enumerate(ps):
                 ts,samples = create_samples(p['k'],p['w'],p['f'],p['sigma'])
-                plt.subplot(subgraphic)
+                ax = plt.subplot(subgraphic)
+                ax.set_title(titles[i])
                 plt.xlim(xmax=2., xmin=0.)
                 plt.ylim(ymax=10, ymin=-10.)
                 plt.plot(ts, samples, 'b')
-                plt.show()
                 subgraphic += 1
+                plt.tight_layout()
+            plt.show()
+        elif command.strip().lower() == 'drawcomplexity':
+            sigma = params['sigma'] if 'sigma' in params.keys() else 1.01
+            ForceGenerator.load_complex(sigma=sigma)
+            K, W, C = ForceGenerator.Complexity[sigma]
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+
+
+
+            force_generator = ForceGenerator(0.0, 0.0, 0.0, 1.01)
+            ks, ws, cs = [0.], [0.], [force_generator.currentComplex()]
+            while 1:
+                changed, maxcomplex, k, w, f, sigma = force_generator.promptComplex(20.0)
+                if not changed:
+                    break
+                print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k, w, f, sigma))
+                ks.append(k)
+                ws.append(w)
+                cs.append(maxcomplex+50)
+            surf = ax.plot_surface(K, W, C, cmap=cm.coolwarm,
+                                   linewidth=1, antialiased=False)
+            fig.colorbar(surf, shrink=0.5, aspect=5)
+
+            #ax.scatter(ks,ws,cs,color='green')
+
+
+
+
+            plt.show()
+
+
         # 执行neat复杂度-奖励曲线计算过程
         elif command.strip().lower() == 'run':
             name = params['alg']
