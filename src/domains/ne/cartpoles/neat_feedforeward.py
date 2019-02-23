@@ -49,7 +49,7 @@ def callback(event,monitor):
     global epochcount
     global  mode
     if event == 'epoch.end':
-        gc.collect()
+        #gc.collect()
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
         maxfitness_ind = monitor.evoTask.curSession.pop.inds[0]
         maxfitness_records.append(maxfitness)
@@ -216,7 +216,7 @@ def execute():
             'file': 'neat_cartpole.log'                            # 日志文件名
         },
         'evalate':{
-            'parallel':50,                                         # 并行执行评估的线程个数，缺省0，可选
+            'parallel':0,                                         # 并行执行评估的线程个数，缺省0，可选
         },
         'operations':{
             #'method' : 'neat',                                   # 已有的进化操作序列名称，与text两个只用一个
@@ -240,16 +240,16 @@ def execute():
                 'deleteconnection':0.1                            # 删除连接的概率
             },
             'weight':{
-                'parallel': 50,  # 并行执行权重变异的线程个数，缺省0，可选
+                'parallel': 0,  # 并行执行权重变异的线程个数，缺省0，可选
                 'epoch':3,                                          # 权重调整次数
             }
         }
 
     }
-
+    gc.disable()
     evolutionTask = EvolutionTask(1,popParam,callback)
     evolutionTask.execute(runParam)
-
+    gc.enable()
 if __name__ == '__main__':
 
     force.init()
