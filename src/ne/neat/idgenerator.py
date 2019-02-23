@@ -37,12 +37,14 @@ class NeatIdGenerator:
 
         # 判断是有已有
         if coord is not None:
-            if str(coord) in self.neuronIdcaches.keys():
+            #if str(coord) in self.neuronIdcaches.keys():
+            if str(coord) in self.neuronIdcaches:
                 id = self.neuronIdcaches[str(coord)]
                 self.neuronIdCounts[id] = self.neuronIdCounts[id] + 1
                 return id
         if synapse is not None:
-            if synapse.id in self.neuronIdcaches.keys():
+            #if synapse.id in self.neuronIdcaches.keys():
+            if synapse.id in self.neuronIdcaches:
                 id = self.neuronIdcaches[synapse.id]
                 self.neuronIdCounts[id] = self.neuronIdCounts[id] + 1
                 return id
@@ -61,10 +63,13 @@ class NeatIdGenerator:
         return self.neuronId
 
     def removeNeuronId(self,nid):
-        if nid not in self.neuronIdCounts.keys():return
+        #if nid not in self.neuronIdCounts.keys():return
+        if nid not in self.neuronIdCounts: return
         self.neuronIdCounts[nid] = self.neuronIdCounts[nid] - 1
         if self.neuronIdCounts[nid] <= 0:
-            self.neuronIdcaches = {k: self.neuronIdcaches[k] for k in self.neuronIdcaches.keys() if self.neuronIdcaches[k] != nid}
+            #self.neuronIdcaches = {k: self.neuronIdcaches[k] for k in self.neuronIdcaches.keys() if self.neuronIdcaches[k] != nid}
+            self.neuronIdcaches = {k: self.neuronIdcaches[k] for k in self.neuronIdcaches if
+                                   self.neuronIdcaches[k] != nid}
             del self.neuronIdCounts[nid]
 
     def getAllCacheNeuronIds(self):
@@ -85,7 +90,8 @@ class NeatIdGenerator:
         :return:       无论是哪个网络，输入和输出神经元都相同的突触id也相同
         '''
         key = str(fromId) + "-" + str(toId)
-        if key in self.synapseIdcaches.keys():
+        #if key in self.synapseIdcaches.keys():
+        if key in self.synapseIdcaches:
             id = self.synapseIdcaches[key]
             self.synapseIdCounts[id] = self.synapseIdCounts[id]+1
             return id
@@ -97,11 +103,14 @@ class NeatIdGenerator:
 
 
     def removeSynapse(self,sid):
-        if sid not in self.synapseIdCounts.keys():return
+        #if sid not in self.synapseIdCounts.keys():return
+        if sid not in self.synapseIdCounts: return
         self.synapseIdCounts[sid] = self.synapseIdCounts[sid] - 1
         if self.synapseIdCounts[sid] <= 0:
-            self.synapseIdcaches = {k: self.synapseIdcaches[k] for k in self.synapseIdcaches.keys() if
-                                   self.synapseIdcaches[k] != sid}
+            #self.synapseIdcaches = {k: self.synapseIdcaches[k] for k in self.synapseIdcaches.keys() if
+            #                       self.synapseIdcaches[k] != sid}
+            self.synapseIdcaches = {k: self.synapseIdcaches[k] for k in self.synapseIdcaches if
+                                    self.synapseIdcaches[k] != sid}
             del self.synapseIdCounts[sid]
 
     def getAllCacheSynasesIds(self,net=None):
@@ -118,7 +127,8 @@ class NeatIdGenerator:
     def getSpeciesid(self,netlist):
         netids = list(set(sorted([net.id for net in netlist])))
         key = reduce(lambda x,y:str(x)+","+str(y),netids)
-        if key in self.speciesIdcaches.keys():
+        #if key in self.speciesIdcaches.keys():
+        if key in self.speciesIdcaches:
             return self.speciesIdcaches[key]
 
         self.speciesid += 1

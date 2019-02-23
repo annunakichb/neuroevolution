@@ -99,3 +99,11 @@ def readText(filename,encode='utf-8',raiseError=False):
     lines = readLines(filename,None,encode,raiseError)
     if collections.isEmpty(lines): return  ''
     return reduce(lambda x,y:x+'\n'+y,lines)
+
+
+def get_data_path():
+    curpath = os.path.split(os.path.realpath(__file__))[0]
+    srcpath = os.path.abspath(os.path.dirname(curpath))
+    rootpath = os.path.abspath(os.path.dirname(srcpath))
+    datapath = rootpath + '\\datas'
+    return datapath

@@ -170,7 +170,8 @@ class Session:
 
     def __createPopRecord(self):
         r = {}
-        for featureKey in self.pop.params.features.keys():
+        #for featureKey in self.pop.params.features.keys():
+        for featureKey in self.pop.params.features:
             r[featureKey] = {}
             r[featureKey]['max'] = self.pop[featureKey]['max']
             r[featureKey]['average'] = self.pop[featureKey]['average']

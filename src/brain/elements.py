@@ -110,7 +110,8 @@ class NeuralElement:
         if var is not None:return var.value
 
         # 在状态集合中查找
-        if item in self.states.keys():
+        #if item in self.states.keys():
+        if item in self.states:
             return self.states[item]
 
         # 在参数集合中查找
@@ -148,8 +149,11 @@ class Neuron(NeuralElement):
         super(Neuron, self).__init__(id,birth,modelConfiguration,coord)
         #super(id,birth,modelConfiguration,coord)
         self.layer = layer
-        if activationFunction is None and 'activationFunction' in modelConfiguration.keys() and  \
-                'selection' in modelConfiguration.activationFunction.keys() and \
+        #if activationFunction is None and 'activationFunction' in modelConfiguration.keys() and  \
+        #        'selection' in modelConfiguration.activationFunction.keys() and \
+        #        modelConfiguration.activationFunction.selection is not None:
+        if activationFunction is None and 'activationFunction' in modelConfiguration and \
+                'selection' in modelConfiguration.activationFunction and \
                 modelConfiguration.activationFunction.selection is not None:
             activationFunctionIndex = int(np.random.uniform(0, len(modelConfiguration.activationFunction.selection)))
             activationFunctionName = modelConfiguration.activationFunction.selection[activationFunctionIndex]

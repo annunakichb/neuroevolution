@@ -35,7 +35,10 @@ class CommonInputNeurnModel:
         :param context: 上下文,对于输入神经元，应包含value
         :return:
         '''
-        if context is None or not context.keys().__contains__('value'):raise RuntimeError('神经元计算失败(CommonInputNeurnModel):没有有效的输入')
+        #if context is None or not context.keys().__contains__('value'):raise RuntimeError('神经元计算失败(CommonInputNeurnModel):没有有效的输入')
+        if context is None or 'values' not in context: raise RuntimeError(
+            '神经元计算失败(CommonInputNeurnModel):没有有效的输入')
+
         value = context['value']
         neuron.states['value'] = value
         neuron.states['activation'] = context['value'] != 0
@@ -74,7 +77,8 @@ class CommonHiddenNeuronModel:
         if synapses is None or len(synapses)<=0:return
 
         # 检查突触是否都有值
-        if not collections.all(synapses,lambda s:'value' in s.states.keys()):
+        #if not collections.all(synapses,lambda s:'value' in s.states.keys()):
+        if not collections.all(synapses, lambda s: 'value' in s.states):
             return None
 
         # 取得突触所有输入值并求和(权重已经计算)
@@ -129,7 +133,8 @@ class CommonSynapseModel:
         '''
         neuron = net.getNeuron(id=synapse.fromId)
         if neuron is None:raise RuntimeError('突触计算失败：找不到接入神经元:'+synapse.fromId)
-        if 'value' not in neuron.states.keys():return None
+        #if 'value' not in neuron.states.keys():return None
+        if 'value' not in neuron.states: return None
         w = synapse['weight']
         value = w * neuron['value']
         synapse['value'] = value

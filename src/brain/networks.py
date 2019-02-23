@@ -1,5 +1,7 @@
 from enum import Enum
 import  numpy as np
+import networkx as nx
+import community
 import threading
 from functools import reduce
 from utils import collections as collections
@@ -10,6 +12,11 @@ from brain.elements import Neuron
 import brain.runner as runner
 from brain.runner import NeuralNetworkTask
 #import brain.networks as networks
+
+import scipy
+import scipy.cluster.hierarchy as sch
+from scipy.cluster.vq import vq,kmeans,whiten
+from sklearn import cluster
 
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
@@ -393,18 +400,43 @@ class NeuralNetwork:
             return collections.first(self.synapses,lambda s:s.id == id)
         return collections.first(self.synapses,lambda s:s.fromId == fromId and s.toId == toId)
 
-    def getConnectionMarix(self):
+    def getConnectionMarix(self,returntype='tuple',valuetype='01'):
         '''
+        @:param returntype str
+                           tuple 返回元组 tuple[fromId][toId] = synapse
+                           list  返回二维列表,值根据valuetype
+        ::param valuetype str   01  有连接为1
+                                synapse 值为突触对象
+                                weight  值为权重
         得到连接矩阵
         :return: dict key是两个神经元的id
         '''
-        marix = {}
-        synapses = self.getSynapses()
-        def func(s):
-            marix[s.fromId][s.toId] = s
-        collections.foreach(synapses,func)
-        return marix
 
+
+        if returntype == 'tuple':
+            marix = {}
+            synapses = self.getSynapses()
+            def func(s):
+                marix[s.fromId][s.toId] = s
+            collections.foreach(synapses,func)
+            return marix
+        else:
+            marix = []
+            allneurons = self.getNeurons()
+            for i in range(len(allneurons)):
+                srcNeuron = allneurons[i]
+                row = []
+                for j in range(len(allneurons)):
+                    destNeuron = allneurons[j]
+                    synapse = self.getSynapse(fromId= srcNeuron.id,toId=destNeuron.id)
+                    if valuetype == '01':
+                        row.append(0 if synapse is None else 1.)
+                    elif valuetype == 'synapse':
+                        row.append(synapse)
+                    else:
+                        row.append(synapse['weight'])
+                marix.append(row)
+            return marix
     #endregion
 
     #region 神经元和突触数量
@@ -678,11 +710,100 @@ class NeuralNetwork:
         self.taskstat[key] = value
 
     def __getitem__(self, item):
-        if item in self.taskstat.keys():return self.taskstat[item]
+        #if item in self.taskstat.keys():return self.taskstat[item]
+        if item in self.taskstat: return self.taskstat[item]
         return None
         #return super(NeuralNetwork,self).__getitem__(item)
 
-    #endregion
+    def compute_modular(self):
+        '''
+
+        :return: 模块度的取值范围为：[−1/2,1)[−1/2,1)，有可能得到负值;
+                   论文表示当Q值在0.3~0.7之间时，说明聚类的效果很好
+        '''
+
+
+        G = nx.Graph()
+        allneurons = self.getNeurons()
+        nids = [n.id for n in allneurons]
+        G.add_nodes_from(nids)
+
+        synapses = self.getSynapses()
+        for s in synapses:
+            G.add_edge(s.fromId,s.toId)
+
+        part = community.best_partition(G)
+        return (community.modularity(part, G),part)
+
+
+        # 生成点与点之间的距离矩阵,这里用的欧氏距离:
+        '''
+        points = self.getConnectionMarix(returntype=list, valuetype='01')
+        disMat = sch.distance.pdist(points, 'euclidean')
+        # 进行层次聚类:
+        Z = sch.linkage(disMat, method='average')
+        # 根据linkage matrix Z得到聚类结果:
+        cluster = sch.fcluster(Z,t=0,criterion='inconsistent')
+        print('网络'+str(self.id)+'的模块划分:'+str(cluster))
+        # 计算模块度,基于"Neural Modularity Helps Organisms Evolve to
+        # Learn New Skills without Forgetting Old Skills"
+        '''
+
+        #1.生成社区矩阵
+        '''
+        m = len(set(cluster))  # 聚类个数
+        if m <= 1:
+            return 0.
+        n = len(points)
+        points = np.array(points)
+        lin = list(map(np.sum, points))
+        col = list(map(np.sum, zip(*points)))
+        sum = 0.
+        for i in range(n):
+            for j in range(n):
+                if cluster[i] != cluster[j]:
+                    continue
+                ki_in = col[i]
+                kj_out = lin[j]
+                sum += points[i][j] - ki_in * kj_out / (2 * m)
+
+        Q = sum / (2 * m)
+        return Q
+        '''
+
+        '''
+        marix = []
+        r = np.arange(1,m+1,1)
+        for moduleid1 in r:
+            row = []
+            for moduleid2 in r:
+                index1 = np.where(cluster==moduleid1)
+                index2 = np.where(cluster==moduleid2)
+                count = 0
+                for i in index1[0]:
+                    for j in index2[0]:
+                        if points[i][j] > 0:
+                            count += 1
+                row.append(count)
+            marix.append(row)
+
+        n = len(marix)
+        marix = np.array(marix)
+        lin = list(map(np.sum, marix))
+        col = list(map(np.sum, zip(*marix)))
+        sum = 0.
+        for i in range(n):
+            for j in range(n):
+                if marix[i][j] == 0:
+                    continue
+                ki_in = col[i]
+                kj_out = lin[j]
+                sum += marix[i][j] - ki_in*kj_out / (2*m)
+
+        Q = sum / (2*m)
+        return Q
+        '''
+        #endregion
 
 
 

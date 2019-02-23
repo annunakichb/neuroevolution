@@ -46,7 +46,8 @@ class NeatMutate:
             #    raise RuntimeError('对个体激活函数的变异还没有实现')
             succ,msg,oper,obj = self.__domutate(session.pop[mutateid], session)
             if succ:
-                if oper not in mutateStat.keys():mutateStat[oper] = 0
+                #if oper not in mutateStat.keys():mutateStat[oper] = 0
+                if oper not in mutateStat: mutateStat[oper] = 0
                 mutateStat[oper] = mutateStat[oper] + 1
 
         # 对每个个体的权重进行随机变化
@@ -188,7 +189,8 @@ class NeatMutate:
         epoch = session.runParam.mutate.weight.epoch
 
         evoluator = session.pop.params.features['fitness']
-        if 'fitness' not in ind.features.keys(): #新产生的个体没有计算过适应度
+        #if 'fitness' not in ind.features.keys(): #新产生的个体没有计算过适应度
+        if 'fitness' not in ind.features:  # 新产生的个体没有计算过适应度
             value = evoluator.calacute(ind, session)
             ind['fitness'] = value
         origin_fitness = ind['fitness']

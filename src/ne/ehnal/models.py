@@ -160,7 +160,7 @@ class AttentionNeuronModel:
 
         # 检查输入突触是否有刺激到达
         for i,synapse in enumerate(synapses):
-
+            pass
 
         # 检查突触是否都有值
         if not collections.all(synapses,lambda s:'value' in s.states.keys()):

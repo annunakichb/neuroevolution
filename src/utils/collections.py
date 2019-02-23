@@ -164,11 +164,13 @@ def listtostr(list,**props):
         :return:
         '''
     if isEmpty(list):return ''
-    format = 'csv' if props is None or 'format' not in props.keys() else props['format']
+    #format = 'csv' if props is None or 'format' not in props.keys() else props['format']
+    format = 'csv' if props is None or 'format' not in props else props['format']
     if format == 'json':
         return json.dumps(list)
 
-    sep = ',' if props is None or not props.keys().__contains__('sep') else props['sep']
+    #sep = ',' if props is None or not props.keys().__contains__('sep') else props['sep']
+    sep = ',' if props is None or 'sep' not in props else props['sep']
     ss = ''
     for value in list:
         if len(ss)>0:ss += sep    #添加分隔符
@@ -190,10 +192,12 @@ def dicttostr(dict,**props):
     '''
     if isEmpty(dict):return ''
 
-    format = '{$P}={$V}' if props is None or 'format' not in props.keys() else props['format']
+    #format = '{$P}={$V}' if props is None or 'format' not in props.keys() else props['format']
+    format = '{$P}={$V}' if props is None or 'format' not in props else props['format']
     if format == 'json':
         return json.dumps(dict)
-    sep = ',' if props is None or 'sep' not in props.keys() else props['sep']
+    #sep = ',' if props is None or 'sep' not in props.keys() else props['sep']
+    sep = ',' if props is None or 'sep' not in props else props['sep']
     s = []
     for key, value in dict.items():
         s.append(format.replace('{$P}',str(key)).replace('{$V}',strs.format(value)))

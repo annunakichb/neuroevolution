@@ -199,7 +199,8 @@ class Registry:
         :return: 注册的对象
         '''
         if not strs.isVaild(name):return default
-        if name in self.__tables__.keys():
+        #if name in self.__tables__.keys():
+        if name in self.__tables__:
             return self.__tables__[name]
 
         if not setifnotexist:return default

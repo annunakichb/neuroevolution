@@ -136,10 +136,14 @@ def run(**kwargs):
     global env
     global net
 
-    mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
-    maxepochcount = 1000 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
-    complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
-    xh = None if 'xh' not in kwargs.keys() else int(kwargs['xh'])
+    #mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
+    #maxepochcount = 1000 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
+    #complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+    #xh = None if 'xh' not in kwargs.keys() else int(kwargs['xh'])
+    mode = 'noreset' if 'mode' not in kwargs else kwargs['mode']
+    maxepochcount = 1000 if 'maxepochcount' not in kwargs else int(kwargs['maxepochcount'])
+    complexunit = 20.0 if 'complexunit' not in kwargs else float(kwargs['complexunit'])
+    xh = None if 'xh' not in kwargs else int(kwargs['xh'])
 
     execute(xh,mode)
 

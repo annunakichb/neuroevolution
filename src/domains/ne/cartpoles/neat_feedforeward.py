@@ -16,7 +16,7 @@ from evolution.session import EvolutionTask
 import domains.ne.cartpoles.enviornment.force as force
 import domains.ne.cartpoles.enviornment.runner as runner
 from brain.viewer import NetworkView
-
+import utils.files as files
 
 
 
@@ -41,6 +41,7 @@ mode = 'noreset'
 epochcount = 0
 maxepochcount = 10
 complexunit = 20.
+modularities = []
 
 # 记录最优个体的平衡车运行演示视频
 def callback(event,monitor):
@@ -78,13 +79,24 @@ def callback(event,monitor):
             netviewer = NetworkView()
             netviewer.drawNet(maxfitness_ind.genome, filename=filename, view=False)
 
+            # 计算最优网络模块度
+            modularity = maxfitness_ind.genome.compute_modular()
+            modularities.append((complex_records[-1],modularity))
+            print(modularities)
+            filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas_' + mode + os.sep + \
+                       'neat' + os.sep + 'modulars.csv'
+            out = open(filename, 'a', newline='')
+            csv_write = csv.writer(out, dialect='excel')
+            csv_write.writerow([complex_records[-1],modularity])
+
             # 提升复杂度
             changed, maxcomplex, k,w, f, sigma = force.force_generator.promptComplex(complexunit)
             if changed:
                 print('环境复杂度=%.3f,k=%.2f,w=%.2f,f=%.2f,sigma=%.2f' % (maxcomplex, k,w, f, sigma))
                 if mode == 'reset':
                     monitor.evoTask.curSession.runParam.terminated.maxIterCount = epochcount-1
-
+                if maxcomplex >= 400:
+                    monitor.evoTask.curSession.runParam.terminated.maxIterCount = epochcount - 1
             else:
                 np.save('neat_result', complex_records, fitness_records)
                 #plt.plot(complex_records, reward_list, label='reward')
@@ -104,9 +116,12 @@ def run(**kwargs):
     global maxepochcount
     global complexunit
 
-    mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
-    maxepochcount = 10 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
-    complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+    #mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
+    #maxepochcount = 10 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
+    #complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+    mode = 'noreset' if 'mode' not in kwargs else kwargs['mode']
+    maxepochcount = 10 if 'maxepochcount' not in kwargs else int(kwargs['maxepochcount'])
+    complexunit = 20.0 if 'complexunit' not in kwargs else float(kwargs['complexunit'])
 
     while True:
         execute()
@@ -236,5 +251,8 @@ def execute():
     evolutionTask.execute(runParam)
 
 if __name__ == '__main__':
+
     force.init()
-    run(mode='noreset',maxepochcount=20,complexunit=20.)
+    run(mode='noreset',maxepochcount=50,complexunit=5.)
+
+

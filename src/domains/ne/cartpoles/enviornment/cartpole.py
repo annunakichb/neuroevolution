@@ -134,6 +134,42 @@ class SingleCartPoleEnv(gym.Env):
 
         return np.array(self.state), reward, done, {}
 
+    def lean(self):
+        '''该函数测试在没有风力,也没有小车推力的情况下'''
+        self.reset()
+
+        count = 1
+        state = self.state
+        while 1:
+            x, x_dot, theta, theta_dot = state
+            force = 0
+
+            costheta = math.cos(theta)
+            sintheta = math.sin(theta)
+            temp = (force + self.polemass_length * theta_dot * theta_dot * sintheta) / self.total_mass
+            thetaacc = (self.gravity * sintheta - costheta * temp) / (
+                    self.length * (4.0 / 3.0 - self.masspole * costheta * costheta / self.total_mass))
+            xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+
+            x = x + self.tau * x_dot
+            x_dot = x_dot + self.tau * xacc
+            theta = theta + self.tau * theta_dot
+            theta_dot = theta_dot + self.tau * thetaacc
+
+            state = (x, x_dot, theta, theta_dot)
+            done = x < -self.x_threshold \
+                or x > self.x_threshold \
+                or theta < -self.theta_threshold_radians \
+                or theta > self.theta_threshold_radians
+            done = bool(done)
+
+            if not done:
+                count += 1
+                continue
+            break
+        print('经过',count,'次迭代(',count*self.tau,'秒)后自然倾斜')
+        return count
+
     def reset(self):
         #self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.state = np.array([0.,0.,0.01,0.01])

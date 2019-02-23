@@ -68,7 +68,8 @@ class Monitor:
         self.logger.info("")
         self.logger.info(contents)
 
-        keys = [] if collections.isEmpty(kwdatas) else kwdatas.keys()
+        #keys = [] if collections.isEmpty(kwdatas) else kwdatas.keys()
+        keys = [] if collections.isEmpty(kwdatas) else kwdatas
         for key in keys:
             self.logger.info(key + ':' + str(kwdatas[key]))
 
@@ -96,7 +97,8 @@ class Monitor:
 
     def recordPopulationFeatures(self):
         kwdatas = {}
-        keys = self.evoTask.curSession.pop.features.keys()
+        #keys = self.evoTask.curSession.pop.features.keys()
+        keys = self.evoTask.curSession.pop.features
         for key in keys:
             kwdatas[key] = 'max='+ str(self.evoTask.curSession.pop[key]['max']) +\
                            ",avg="+ str(self.evoTask.curSession.pop[key]['average'])+\

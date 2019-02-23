@@ -84,12 +84,14 @@ class Individual:
         return self._cachedPhenome
 
     def __getitem__(self, item):
-        if item in self.features.keys():
+        #if item in self.features.keys():
+        if item in self.features:
             return self.features[item].value
         return super.__getitem__(item)
 
     def __setitem__(self, key, value):
-        if key not in self.features.keys():
+        #if key not in self.features.keys():
+        if key not in self.features:
             self.features[key] = EvaluationValue()
         self.features[key].append(value)
 
@@ -200,7 +202,8 @@ class Population:
         ind = self.getInd(item)
         if ind is not None: return ind
 
-        if item in self.features.keys():
+        #if item in self.features.keys():
+        if item in self.features:
             if self.features[item] is EvaluationValue:
                 return self.features[item].value
             else:
@@ -215,7 +218,8 @@ class Population:
         :param value: Union(EvaluationValue,dict) 值
         :return: None
         '''
-        if key not in self.features.keys():
+        #if key not in self.features.keys():
+        if key not in self.features:
             self.features[key] = value
 
         if isinstance(value,float):
@@ -225,7 +229,8 @@ class Population:
             self.features[key] = value
 
     def getEvaluationObject(self, key, name):
-        if key not in self.features.keys():
+        #if key not in self.features.keys():
+        if key not in self.features:
             return None
 
         if self.features[key] is EvaluationValue:
@@ -275,7 +280,8 @@ class Specie:
         self.indids.sort(key=lambda id: self.pop.getInd(id)['fitness'], reverse=True)
 
     def __getitem__(self, item):
-        if item in self.features.keys():
+        #if item in self.features.keys():
+        if item in self.features:
             if self.features[item] is EvaluationValue:
                 return self.features[item].value
             else:
@@ -284,7 +290,8 @@ class Specie:
         return super(Specie,self).__getitem__(item)
 
     def __setitem__(self, key, value):
-        if key not in self.features.keys():
+        #if key not in self.features.keys():
+        if key not in self.features:
             self.features[key] = value
 
         if value is float:

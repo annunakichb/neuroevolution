@@ -54,8 +54,10 @@ class NeuralNetworkTask:
         self.test_y = test_y
         self.test_result = [[]]*len(test_y)
         self.kwargs = {} if kwargs is None else kwargs
-        if 'deviation' not in self.kwargs.keys():self.kwargs['deviation'] = 0.00001
-        if 'multilabel' not in self.kwargs.keys():self.kwargs['multilabel'] = False
+        #if 'deviation' not in self.kwargs.keys():self.kwargs['deviation'] = 0.00001
+        #if 'multilabel' not in self.kwargs.keys():self.kwargs['multilabel'] = False
+        if 'deviation' not in self.kwargs:self.kwargs['deviation'] = 0.00001
+        if 'multilabel' not in self.kwargs:self.kwargs['multilabel'] = False
 
 
 
@@ -122,15 +124,18 @@ class SimpleNeuralNetworkRunner:
         neuronCount = net.getNeuronCount()
         iterCount = 0
         outputNeurons = net.getOutputNeurons()
-        while not collections.all(outputNeurons,lambda n:'value' in n.states.keys()) and iterCount<=neuronCount:
+        #while not collections.all(outputNeurons,lambda n:'value' in n.states.keys()) and iterCount<=neuronCount:
+        while not collections.all(outputNeurons, lambda n: 'value' in n.states) and iterCount <= neuronCount:
             iterCount += 1
-            uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.states.keys())
+            #uncomputeNeurons = collections.findall(ns,lambda n:'value' not in n.states.keys())
+            uncomputeNeurons = collections.findall(ns, lambda n: 'value' not in n.states)
             if collections.isEmpty(uncomputeNeurons):break
             for n in uncomputeNeurons:
                 model = n.getModel()
                 synapses = net.getInputSynapse(n.id)
                 if collections.isEmpty(synapses):continue
-                if not collections.all(synapses,lambda s:'value' in s.states.keys()):continue
+                #if not collections.all(synapses,lambda s:'value' in s.states.keys()):continue
+                if not collections.all(synapses, lambda s: 'value' in s.states): continue
                 model.execute(n,net)
 
                 synapses = net.getOutputSynapse(n.id)
@@ -138,7 +143,8 @@ class SimpleNeuralNetworkRunner:
                 collections.foreach(synapses,lambda s:s.getModel().execute(s,net))
 
         # 将没结果的输出神经元的值设置为0
-        outputNeuronsWithNoResult = collections.findall(outputNeurons,lambda n:'value' not in n.states.keys())
+        #outputNeuronsWithNoResult = collections.findall(outputNeurons,lambda n:'value' not in n.states.keys())
+        outputNeuronsWithNoResult = collections.findall(outputNeurons, lambda n: 'value' not in n.states)
         if not collections.isEmpty(outputNeuronsWithNoResult):
             collections.foreach(outputNeuronsWithNoResult,lambda n:exec("n['value']=0"))
         # 取得结果
@@ -166,7 +172,8 @@ class GeneralNeuralNetworkRunner:
         '''
 
         # 取得运行方式，缺省是按照时间运行
-        runMode = 'time' if kwargs is None or 'runMode' not in kwargs.keys() else int(kwargs['runMode'])
+        #runMode = 'time' if kwargs is None or 'runMode' not in kwargs.keys() else int(kwargs['runMode'])
+        runMode = 'time' if kwargs is None or 'runMode' not in kwargs else int(kwargs['runMode'])
         if runMode == 'time':
             self._activateByTime(net,inputs,activeno,kwargs)
         else:
@@ -183,10 +190,12 @@ class GeneralNeuralNetworkRunner:
         :return: （网络输出,结束时间)，网络输出是一个list，其中每项是一个元组(value,activation,firerate,time)
         '''
         # 参数:最大迭代次数
-        maxIterCount = 0 if kwargs is None or 'maxIterCount' not in kwargs.keys() else int(kwargs['maxIterCount'])
+        #maxIterCount = 0 if kwargs is None or 'maxIterCount' not in kwargs.keys() else int(kwargs['maxIterCount'])
+        maxIterCount = 0 if kwargs is None or 'maxIterCount' not in kwargs else int(kwargs['maxIterCount'])
         iterCount = 0
         # 参数：最大时钟
-        maxclock = 0 if kwargs is None or 'maxclock' not in kwargs.keys() else float(kwargs['maxclock'])
+        #maxclock = 0 if kwargs is None or 'maxclock' not in kwargs.keys() else float(kwargs['maxclock'])
+        maxclock = 0 if kwargs is None or 'maxclock' not in kwargs else float(kwargs['maxclock'])
         lastclock,clock = 0.0,0.0
 
         # 重置网络运行信息
@@ -201,7 +210,9 @@ class GeneralNeuralNetworkRunner:
             model.execute(neuron, net, value=inputs[i], no=activeno)
 
         # 参数：检查输出状态稳定的次数
-        outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs.keys() else int(
+        #outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs.keys() else int(
+        #    kwargs['outputMaxCheckCount'])
+        outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs else int(
             kwargs['outputMaxCheckCount'])
         outputCheckCount = 0
         lastOutputs = []
@@ -275,9 +286,11 @@ class GeneralNeuralNetworkRunner:
         :return: tuple : （网络输出,结束时间)，网络输出是一个list，其中每项是一个元组(value,activation,firerate,time)
         '''
         # 参数:迭代时间间隔
-        ticks = 0.01 if kwargs is None or 'ticks' not in kwargs.keys() else float(kwargs['ticks'])
+        #ticks = 0.01 if kwargs is None or 'ticks' not in kwargs.keys() else float(kwargs['ticks'])
+        ticks = 0.01 if kwargs is None or 'ticks' not in kwargs else float(kwargs['ticks'])
         # 参数：最大时钟
-        maxclock = 0 if kwargs is None or 'maxclock' not in kwargs.keys() else float(kwargs['maxclock'])
+        #maxclock = 0 if kwargs is None or 'maxclock' not in kwargs.keys() else float(kwargs['maxclock'])
+        maxclock = 0 if kwargs is None or 'maxclock' not in kwargs else float(kwargs['maxclock'])
         clock = 0.0
 
         # 重置网络运行信息
@@ -293,7 +306,9 @@ class GeneralNeuralNetworkRunner:
             model.execute(neuron, net, value=inputs[i],no=activeno)
 
         # 参数：检查输出状态稳定的次数
-        outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs.keys() else int(kwargs['outputMaxCheckCount'])
+        #outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs.keys() else int(kwargs['outputMaxCheckCount'])
+        outputMaxCheckCount = 1 if kwargs is None or 'outputMaxCheckCount' not in kwargs else int(
+            kwargs['outputMaxCheckCount'])
         outputCheckCount = 0
         lastOutputs = []
 

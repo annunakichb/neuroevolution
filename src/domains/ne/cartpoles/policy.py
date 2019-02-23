@@ -129,10 +129,14 @@ class PolicyGradients:
         global complexunit
         global env
 
-        mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
-        maxepochcount = 1000 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
-        complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
-        xh = None if 'xh' not in kwargs.keys() else int(kwargs['xh'])
+        #mode = 'noreset' if 'mode' not in kwargs.keys() else kwargs['mode']
+        #maxepochcount = 1000 if 'maxepochcount' not in kwargs.keys() else int(kwargs['maxepochcount'])
+        #complexunit = 20.0 if 'complexunit' not in kwargs.keys() else float(kwargs['complexunit'])
+        #xh = None if 'xh' not in kwargs.keys() else int(kwargs['xh'])
+        mode = 'noreset' if 'mode' not in kwargs else kwargs['mode']
+        maxepochcount = 1000 if 'maxepochcount' not in kwargs else int(kwargs['maxepochcount'])
+        complexunit = 20.0 if 'complexunit' not in kwargs else float(kwargs['complexunit'])
+        xh = None if 'xh' not in kwargs else int(kwargs['xh'])
 
         complexes_list = []
         notdone_count_list = []
@@ -194,7 +198,7 @@ if __name__ == '__main__':
     force.init()
 
     for i in range(10):
-        kwargs = {'mode': 'noreset', 'xh':i,'maxepochcount' : 500,'complexunit':20.0}
+        kwargs = {'mode': 'reset', 'xh':i,'maxepochcount' : 1500,'complexunit':100.0}
         env = SingleCartPoleEnv().unwrapped
         net = PolicyGradients()
         while 1:

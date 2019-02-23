@@ -10,6 +10,7 @@ from matplotlib.ticker import LinearLocator
 import utils.files as files
 
 class ForceGenerator():
+
     K_MIN = 0.
     K_MAX = 50.
     K_STEP = 0.05
@@ -19,6 +20,7 @@ class ForceGenerator():
     SIGMA_MIN = 0.01
     SIGMA_MAX = 2.5
     SIGMA_STEP = 0.5
+
 
     Complexity = {}
     complex_interval = 0.1
@@ -44,14 +46,22 @@ class ForceGenerator():
         self.initw,self.w = w,w
         self.initf,self.f = f,f
         self.initsigma,self.sigma = sigma,sigma
-        self.action_func = kwargs['action_func'] if 'action_func' in kwargs.keys() else self._default_action_func
-        self.action_vaild = kwargs['action_vaild'] if 'action_vaild' in kwargs.keys() else False
-        ForceGenerator.complex_interval = kwargs['complex_interval'] if 'complex_interval' in kwargs.keys() else 0.1
-        ForceGenerator.complex_name = kwargs['complex_name'] if 'complex_name' in kwargs.keys() else 'cramer_rao'
+        #self.action_func = kwargs['action_func'] if 'action_func' in kwargs.keys() else self._default_action_func
+        #self.action_vaild = kwargs['action_vaild'] if 'action_vaild' in kwargs.keys() else False
+        #ForceGenerator.complex_interval = kwargs['complex_interval'] if 'complex_interval' in kwargs.keys() else 0.1
+        #ForceGenerator.complex_name = kwargs['complex_name'] if 'complex_name' in kwargs.keys() else 'cramer_rao'
+        self.action_func = kwargs['action_func'] if 'action_func' in kwargs else self._default_action_func
+        self.action_vaild = kwargs['action_vaild'] if 'action_vaild' in kwargs else False
+        ForceGenerator.complex_interval = kwargs['complex_interval'] if 'complex_interval' in kwargs else 0.1
+        ForceGenerator.complex_name = kwargs['complex_name'] if 'complex_name' in kwargs else 'cramer_rao'
 
-        self.k_min = kwargs['k_min'] if 'k_min' in kwargs.keys() else ForceGenerator.K_MIN
-        self.k_max = kwargs['k_max'] if 'k_max' in kwargs.keys() else ForceGenerator.K_MAX
-        self.k_step = kwargs['k_step'] if 'k_step' in kwargs.keys() else ForceGenerator.K_STEP
+
+        #self.k_min = kwargs['k_min'] if 'k_min' in kwargs.keys() else ForceGenerator.K_MIN
+        #self.k_max = kwargs['k_max'] if 'k_max' in kwargs.keys() else ForceGenerator.K_MAX
+        #self.k_step = kwargs['k_step'] if 'k_step' in kwargs.keys() else ForceGenerator.K_STEP
+        self.k_min = kwargs['k_min'] if 'k_min' in kwargs else ForceGenerator.K_MIN
+        self.k_max = kwargs['k_max'] if 'k_max' in kwargs else ForceGenerator.K_MAX
+        self.k_step = kwargs['k_step'] if 'k_step' in kwargs else ForceGenerator.K_STEP
         OMEGE_MIN = -1.0
         OMEGE_MAX = 1.0
         OMEGE_STEP = 0.01
@@ -95,7 +105,8 @@ class ForceGenerator():
 
         # 4维复杂度
         if ForceGenerator.comples_dimension == 4:
-            if 'total' not in ForceGenerator.Complexity.keys():
+            #if 'total' not in ForceGenerator.Complexity.keys():
+            if 'total' not in ForceGenerator.Complexity:
                 ForceGenerator.load_complex(sigma=None)
             K, W,S,C = ForceGenerator.Complexity['total']
             sindex = -1
@@ -122,7 +133,8 @@ class ForceGenerator():
             return None
 
         # 3维复杂度
-        if sigma not in ForceGenerator.Complexity.keys():
+        #if sigma not in ForceGenerator.Complexity.keys():
+        if sigma not in ForceGenerator.Complexity:
             ForceGenerator.load_complex(sigma)
         K, W, C = ForceGenerator.Complexity[sigma]
 
@@ -150,8 +162,9 @@ class ForceGenerator():
         :return:
         '''
         if ForceGenerator.comples_dimension == 4:
-            raise RuntimeError('未实现')
-        if sigma not in ForceGenerator.Complexity.keys():
+            return self.find_var_by_complex_in4d(complex)
+        #if sigma not in ForceGenerator.Complexity.keys():
+        if sigma not in ForceGenerator.Complexity:
             ForceGenerator.load_complex(sigma)
         K, W, C = ForceGenerator.Complexity[sigma]
 
@@ -163,6 +176,15 @@ class ForceGenerator():
                     w = W[i][0]
                     indexs.append([c,k,w])
         return indexs
+
+    def find_var_by_complex_in4d(self,complex,error=3.0):
+        #if 'total' not in ForceGenerator.Complexity.keys():
+        if 'total' not in ForceGenerator.Complexity:
+            ForceGenerator.load_complex()
+        K, W,S,C = ForceGenerator.Complexity['total']
+        indexs = []
+
+        raise RuntimeError('没有实现')
 
     #endregion
 
@@ -268,8 +290,10 @@ class ForceGenerator():
               file str                复杂度数据的文件名(np格式,缺省为force.npz),以及三维图文件名(缺省为force.$noise.npz)
         :return: bool,str,Union(float,str),tuple
         '''
-        noise = kwargs['noise'] if 'noise' in kwargs.keys() else ForceGenerator.SIGMA_MIN
-        file = kwargs['file'] if 'file' in kwargs.keys() else 'complex.npz'
+        #noise = kwargs['noise'] if 'noise' in kwargs.keys() else ForceGenerator.SIGMA_MIN
+        #file = kwargs['file'] if 'file' in kwargs.keys() else 'complex.npz'
+        noise = kwargs['noise'] if 'noise' in kwargs else ForceGenerator.SIGMA_MIN
+        file = kwargs['file'] if 'file' in kwargs else 'complex.npz'
         complexfilename = os.path.split(os.path.realpath(__file__))[0] + os.sep + 'datas' + os.sep + file
 
         if noise == 'dimension':
@@ -571,5 +595,7 @@ def testShow3DComplex():
 
 
 if __name__ == '__main__':
-    test3DcomplexPrompt()
+    #createHighDimensionComplexFile()
+    testHighDimensionComplex()
+    #test3DcomplexPrompt()
 
