@@ -49,7 +49,7 @@ def callback(event,monitor):
     global epochcount
     global  mode
     if event == 'epoch.end':
-        #gc.collect()
+        gc.collect()
         maxfitness = monitor.evoTask.curSession.pop.inds[0]['fitness']
         maxfitness_ind = monitor.evoTask.curSession.pop.inds[0]
         maxfitness_records.append(maxfitness)

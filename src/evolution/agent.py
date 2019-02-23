@@ -29,7 +29,6 @@ class IndividualType:
         self.phenomeType = phenomeType
         self.genomeDecoder = genomeDecoder
 
-
 #个体类型注册表
 individualTypes = Registry()
 #种群类型注册表
