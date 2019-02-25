@@ -8,21 +8,20 @@ import os
 import csv
 import matplotlib.pyplot as plt
 
-from prompt_toolkit import prompt
-from prompt_toolkit.history import FileHistory
-from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-#from prompt_toolkit.contrib.completers import WordCompleter
-#import click
-import matplotlib as mpl
-import  gc
 
-from domains.ne.cartpoles.enviornment.force import  ForceGenerator
-from domains.ne.cartpoles.enviornment.cartpole import  SingleCartPoleEnv
-import domains.ne.cartpoles.dqn_cartpole as dqnrunner
-import domains.ne.cartpoles.ddqn_cartpole as ddqnrunner
-import domains.ne.cartpoles.neat_feedforeward as neatrunner
-import domains.ne.cartpoles.hyperneat_feedforeward as hyperneatrunner
-import  domains.ne.cartpoles.policy as policyrunner
+from domains.cartpoles.enviornment.force import  ForceGenerator
+from domains.cartpoles.enviornment.cartpole import  SingleCartPoleEnv
+import domains.cartpoles.dqn_cartpole as dqnrunner
+import domains.cartpoles.ddqn_cartpole as ddqnrunner
+import domains.cartpoles.neat_feedforeward as neatrunner
+import domains.cartpoles.hyperneat_feedforeward as hyperneatrunner
+import  domains.cartpoles.policy as policyrunner
+import domains.cartpoles.enviornment.force as force
+import domains.research.evolvability.experiment_a_neat as experiment_a_neat
+import domains.research.evolvability.experiment_a_hyperneat as experiment_a_hyperneat
+import domains.research.evolvability.experiment_a_dqn as experiment_a_dqn
+import domains.research.evolvability.experiment_a_ddqn as experiment_a_ddqn
+import domains.research.evolvability.experiment_a_policy as experiment_a_policy
 import utils.files as files
 
 # The following is a complete experiment of the paper "Evolvability Of TWEANN In Dynamic Environment"
@@ -32,9 +31,9 @@ datapath = files.get_data_path() + '\\evolvability\\'
 
 
 def help():
-    print('fig1 显示特征参数和复杂度曲线,对应论文图1')
-    print('fig2 显示复杂度曲面,论文图2')
-    print('runa alg=算法名 mode=reset|noreset complexunit=20 运行实验,算法名称可以是neat,hyperneat,dqn,ddqn,police,reset表示在每个复杂度重置,complexunit表示每次复杂度提升的值')
+    print('fig3 显示特征参数和复杂度曲线,对应论文图3')
+    print('fig4 显示复杂度曲面,论文图4')
+    print('runa alg=算法名 mode=reset|noreset maxepochcount=30 complexunit=20 xh=0运行实验,算法名称可以是neat,hyperneat,dqn,ddqn,police,reset表示在每个复杂度重置,complexunit表示每次复杂度提升的值')
     print('runatotal 对多次试验A数据进行汇总')
     print('fig5 mode=[reset|noreset] 显示复杂度-奖励曲线,缺省mode=noreset')
     print('lean 测试在初始状态下自然倾倒所需要的时间')
@@ -47,27 +46,55 @@ def help():
     print('table6 不同复杂度跨度下的进化能力和健壮性对比')
     print('fig8 模块度计算')
 
-def run():
-    while 1:
-        print('输入命令(help查看):')
-        user_input = sys.stdin.readline()
-        if user_input.strip().lower() == 'quit' or user_input.strip().lower() == 'exit':
-            break
+def docommand(command, params):
+    # 显示复杂度曲面
+    if command.strip().lower() == 'fig3':
+        fig3(params)
+    # 显示几种特殊复杂度曲线
+    elif command.strip().lower() == 'fig4':
+        fig4(params)
+    # 执行neat复杂度-奖励曲线计算过程
+    elif command.strip().lower() == 'runa':
+        runa(params)
+    # 对多次试验A数据进行汇总
+    elif command.strip().lower() == 'runatotal':
+        runatotal(params)
+    # 显示所有算法的复杂度奖励曲线
+    elif command.strip().lower() == 'fig5':
+        fig5(params)
+    # 测试在初始状态下自然倾倒所需要的时间
+    elif command.strip().lower() == 'lean':
+        env = SingleCartPoleEnv()
+        env.lean(params)
+    # 对实验A的数据执行Mann-Whitney U test
+    elif command.strip().lower() == 'table1':
+        table1(params)
+    # 计算试验A的进化能力值
+    elif command.strip().lower() == 'table2':
+        table2(params)
+    # 显示奖励范围曲线
+    elif command.strip().lower() == 'fig6':
+        fig6(params)
+    # 计算试验B中的健壮性
+    elif command.strip().lower() == 'table3':
+        table3(params)
+    # 显示独立进化和连续进化对比曲线
+    elif command.strip().lower() == 'fig7':
+        fig7(params)
+    # 计算试验C的Mann-Whitney U test,计算试验C的独立进化和连续进化进化能力和健壮性对比
+    elif command.strip().lower() == 'table45':
+        table45(params)
+    # 模块度计算
+    elif command.strip().lower() == 'fig8':
+        fig8(params)
 
-        inputs = user_input.split(' ')
-        if len(inputs)<=0:
-            help()
-            continue
-        command = inputs[0]
-        if command is None or command.lower() == '' or command.lower() == 'help':
-            help()
-            continue
-        params = __param_to_dict(inputs[1:])
 
-
-        docommand(command,params)
-
-def fig1(params):
+def fig3(params):
+    '''
+    画出常数风力,带噪音风力,近线性增长风力,周期性风力图
+    :param params: None
+    :return: None
+    '''
     ps = [{'k': 5., 'w': 0., 'f': np.pi / 2, 'sigma': 0.},  # 风力为常数
           {'k': 5., 'w': 0., 'f': np.pi / 2, 'sigma': 1.01},  # 以5为均值,0.1为方差
           {'k': 1., 'w': 0.01, 'f': 0, 'sigma': 1.01},  # 近线性增长的数据          #
@@ -80,32 +107,53 @@ def fig1(params):
         plt.xlim(xmax=2., xmin=0.)
         plt.ylim(ymax=10, ymin=-10.)
         plt.plot(ts, samples, 'b')
-        plt.show()
         subgraphic += 1
-def fig2(params):
-    ForceGenerator.draw_complex()
+    plt.show()
+def fig4(params):
+    '''
+    画复杂度曲面
+    :param params:
+    :return:
+    '''
+    force.init()
+    ForceGenerator.draw_complex(sigma=1.01)
 def runa(params):
-    name = params['alg']
+    '''
+    执行试验A的各个算法
+    :param params:
+    :return:
+    '''
+    name = params['alg'].strip()
+    force.init()
     if name == 'neat':
-        neatrunner.run(**params)
+        experiment_a_neat.run(**params)
     elif name == 'hyperneat':
-        hyperneatrunner.run(**params)
+        experiment_a_hyperneat.run(**params)
     elif name == 'dqn':
-        dqnrunner.train(**params)
+        experiment_a_dqn.run(10,**params)
     elif name == 'ddqn':
-        ddqnrunner.train(**params)
+        experiment_a_ddqn.run(10, **params)
     elif name == 'policy':
-        policyrunner.run(**params)
+        experiment_a_policy.run(10, **params)
+
 def runatotal(params):
-    names = ['dqn', 'ddqn', 'policy']
+    '''
+    对多次试验A数据进行汇总
+    :param params: dict
+                    'mode' 'noreset' or 'reset'
+    :return:
+    '''
+    names = ['dqn', 'ddqn', 'policy','neat','hyperneat']
     mode = params.get('mode', '')
     for name in names:
-        if mode == '' or mode.__contains__('noreset'):
-            createavgcomplex(name, mode='noreset', count=10)
-        if mode == '' or mode.__contains__('reset'):
-            createavgcomplex(name, mode='reset', count=10)
+        createavgcomplex(name, mode)
 
 def fig5(params):
+    '''
+    # 显示所有算法的复杂度奖励曲线
+    :param params: None
+    :return:
+    '''
     algs = ['neat', 'hyperneat', 'dqn', 'ddqn', 'policy']
     datas = {}
     for alg in algs:
@@ -139,6 +187,11 @@ def table1(params):
                 lessthan0_05))
 
 def table2(params):
+    '''
+    计算试验A的进化能力值
+    :param params:
+    :return:
+    '''
     #complexityupperlimit = params['upper'] if 'upper' in params.keys() else 2000.0
     complexityupperlimit = params['upper'] if 'upper' in params else 2000.0
     '''采用公式8'''
@@ -179,6 +232,11 @@ def table2(params):
 
     print(evolvability2)
 def fig6(params):
+    '''
+    显示奖励范围曲线
+    :param params:
+    :return:
+    '''
     algs = ['neat', 'hyperneat', 'dqn', 'ddqn', 'policy']
     fig = plt.figure()
     index = 0
@@ -203,6 +261,11 @@ def fig6(params):
     plt.show()
 
 def table3(params):
+    '''
+    计算试验B中的健壮性
+    :param params:
+    :return:
+    '''
     algs = ['neat', 'hyperneat', 'dqn', 'ddqn', 'policy']
     robustness = {}
     for t, alg in enumerate(algs):
@@ -214,6 +277,11 @@ def table3(params):
     print(robustness)
 
 def fig7(params):
+    '''
+    显示独立进化和连续进化对比曲线
+    :param params:
+    :return:
+    '''
     # algs = ['neat','hyperneat','dqn','ddqn','policy']
     algs = ['neat', 'hyperneat', 'policy']
     modes = ['reset', 'noreset']
@@ -231,7 +299,7 @@ def fig7(params):
     fig = plt.figure()
     # plt.title('Continuous-Independent Curve')
     for index, alg in enumerate(algs):
-        ax = fig.add_subplot(2, 1, index + 1)
+        ax = fig.add_subplot(3, 1, index + 1)
         ax.set_title(alg)
         ax.plot(datas[alg]['noreset'][0], datas[alg]['noreset'][1], label='continuous')
         ax.plot(datas[alg]['reset'][0], datas[alg]['reset'][1], label='independent')
@@ -242,6 +310,11 @@ def fig7(params):
     plt.show()
 
 def table45(params):
+    '''
+    计算试验C的Mann-Whitney U test,计算试验C的独立进化和连续进化进化能力和健壮性对比
+    :param params:
+    :return:
+    '''
     algs = ['neat', 'hyperneat', 'policy']
     modes = ['reset', 'noreset']
     datas = {}
@@ -278,7 +351,7 @@ def table45(params):
         avg_reward = np.average(reward2)
         evo_reset = (2 * avg_reward + avg_complex) / (avg_reward + avg_complex)
         print(alg + '的reset' + '进化能力值是' + str(evo_reset))
-
+'''
 def table6(params):
     labels = ['a', 'b', 'c', 'd']
     filenames = ['neat25.csv', 'neat50.csv', 'neat100.csv', 'neat150.csv']
@@ -298,9 +371,10 @@ def table6(params):
     print(evolvability)
     print('健壮性')
     print(robustness)
-
+'''
 def fig8(params):
-    file = datapath + 'experimentE\\modulars.csv'
+    filename = params['file'] if 'file' in params else 'modularity.csv'
+    file = datapath + 'experimentA' + os.sep + filename
     complex,modularity = [],[]
     with open(file) as f:
         reader = list(csv.reader(f))
@@ -316,43 +390,6 @@ def fig8(params):
     plt.show()
 
 
-
-
-def docommand(command,params):
-        # 显示复杂度曲面
-        if command.lower() == 'complexity':
-            fig2()
-        # 显示几种特殊复杂度曲线
-        elif command.strip().lower() == 'fig1':
-            fig1()
-        # 执行neat复杂度-奖励曲线计算过程
-        elif command.strip().lower() == 'runa':
-            runa()
-        elif command.strip().lower() == 'runatotal':
-            runatotal()
-        # 显示所有算法的复杂度奖励曲线
-        elif command.strip().lower() == 'fig5':
-            fig5()
-        elif command.strip().lower() == 'lean':
-            env = SingleCartPoleEnv()
-            env.lean()
-        elif command.strip().lower() == 'table1':
-            table1()
-        elif command.strip().lower() == 'table2':
-            table2()
-        elif command.strip().lower() == 'fig6':
-            fig6(params)
-        elif command.strip().lower() == 'table3':
-            table3(params)
-
-        elif command.strip().lower() == 'fig7':
-            fig7(params)
-        elif command.strip().lower() == 'table45':
-            table45(params)
-        elif command.strip().lower() == 'table6':
-            table6(params)
-        elif command.strip().lower() == 'fig8':
-            fig8(params)
 
 def __param_to_dict(params):
     '''
@@ -396,7 +433,8 @@ def show_cr_curve(*params):
     显示Complexity-Reward Curve
     :return:
     '''
-    result_files = {'dqn':os.path.split(os.path.realpath(__file__))[0] + "\\dqn_result.npy",
+
+    result_files = {'dqn':datapath +  + "\\dqn_result.npy",
                     'ddqn':os.path.split(os.path.realpath(__file__))[0] + "\\ddqn_result.npy",
                     'policy':os.path.split(os.path.realpath(__file__))[0] + "\\policy_result.npy"
                     }
@@ -467,13 +505,24 @@ def show_cr_curve(datas):
 
 
 
-def createavgcomplex(alg,mode='noreset',count=10):
+def createavgcomplex(alg,mode='noreset'):
+    '''
+    汇总试验csv文件
+    :param alg:   str  算法名
+    :param mode:  str  noreset 连续进化模式  reset 独立进化模式
+    :return:
+    '''
     datas = []
     complex_len_max,rewardlist_len_max = 0,0
-    for i in range(count):
-        file = os.path.split(os.path.realpath(__file__))[0] + os.sep + "datas_" + mode + os.sep + \
-               alg.strip() + os.sep + alg.strip() + "_" + str(int(i)) +".csv"
-        complexity, _, rewardlist = loadcomplex(alg,mode,step=0.,file=file)
+
+    path = datapath + 'experimentA' + os.sep + alg + os.sep
+    match_method = lambda filename:filename.startswith(alg+'_'+mode) and filename.endswith('.csv')
+    csvfiles = files.serachPath(path,match_method)
+    if csvfiles is None or len(csvfiles)<=0:
+        return
+    for csvfile in csvfiles:
+
+        complexity, _, rewardlist = loadcomplex(alg,mode,step=0.,file=csvfile)
         datas.append((complexity,rewardlist))
         if complex_len_max < len(complexity):
             complex_len_max = len(complexity)
@@ -509,8 +558,7 @@ def createavgcomplex(alg,mode='noreset',count=10):
             if sum > 0 and num != 0:
                 rlist.append(sum /num)
         rs.append([complexityes[i]]+rlist)
-
-    filename = os.path.split(os.path.realpath(__file__))[0] + os.sep + "datas_" + mode + os.sep + alg.strip() + ".csv"
+    filename = datapath + os.sep + 'experimentA' + os.sep + alg.strip() + '_' + mode + '.csv'
     out = open(filename, 'w', newline='')
     out.truncate()
     csv_write = csv.writer(out, dialect='excel')
@@ -519,8 +567,17 @@ def createavgcomplex(alg,mode='noreset',count=10):
     out.close()
 
 def loadcomplex(alg,mode='noreset',step=0.,file = None,rewardtype='max'):
+    '''
+    读取复杂度数据
+    :param alg: 　　str 算法名称
+    :param mode: 　 str 模式　noreset reset
+    :param step:    int 步长，决定是否跳过一些数据采样
+    :param file:    str 数据文件名
+    :param rewardtype: str max avg 计算每个复杂度下的奖励列表的最大值还是平均值
+    :return: (list,list,list[list])  complexity,reward,reawrdlist
+    '''
     if file is None:
-        file = os.path.split(os.path.realpath(__file__))[0] + "\\datas_" + mode + "\\" + alg.strip() + ".csv"
+        file = datapath + os.sep + 'experimentA' + os.sep + alg.strip() + '_' + mode + '.csv'
     complexity,reward,reawrdlist = [], [],[]
     level = 0.
     with open(file) as f:
@@ -540,6 +597,12 @@ def loadcomplex(alg,mode='noreset',step=0.,file = None,rewardtype='max'):
     return complexity,reward,reawrdlist
 
 def compute_robustness(complex,rewardlist):
+    '''
+    计算健壮性的值
+    :param complex:　　　list 复杂度
+    :param rewardlist: 　list[list] 奖励列表，第一维对应每个复杂度
+    :return:
+    '''
     f1, f2 = 0.0, 0.0
     for i in range(len(complex) - 1):
         rewardlist[i] = np.sort(rewardlist[i])
@@ -552,6 +615,30 @@ def compute_robustness(complex,rewardlist):
         f1 += np.log(complex[i])
         f2 += np.log(complex[i]) * percent
     return f2 / f1
+
+def run():
+    '''
+    执行命令
+    :return:
+    '''
+    while 1:
+        print('输入命令(help查看):')
+        user_input = sys.stdin.readline()
+        if user_input.strip().lower() == 'quit' or user_input.strip().lower() == 'exit':
+            break
+
+        inputs = user_input.split(' ')
+        if len(inputs)<=0:
+            help()
+            continue
+        command = inputs[0]
+        if command is None or command.lower() == '' or command.lower() == 'help':
+            help()
+            continue
+        params = __param_to_dict(inputs[1:])
+
+
+        docommand(command,params)
 
 if __name__ == '__main__':
     run()

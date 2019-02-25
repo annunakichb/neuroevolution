@@ -36,7 +36,7 @@ class CommonInputNeurnModel:
         :return:
         '''
         #if context is None or not context.keys().__contains__('value'):raise RuntimeError('神经元计算失败(CommonInputNeurnModel):没有有效的输入')
-        if context is None or 'values' not in context: raise RuntimeError(
+        if context is None or 'value' not in context: raise RuntimeError(
             '神经元计算失败(CommonInputNeurnModel):没有有效的输入')
 
         value = context['value']

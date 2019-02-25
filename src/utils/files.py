@@ -42,6 +42,29 @@ def spiltfilename(filename):
     (shotname,extension) = os.path.splitext(tempfilename)
     return filepath,shotname,extension
 
+def serachPath(root,match_method,childs = False):
+    '''
+    搜索路径
+    :param root:
+    :param match_method:
+    :param childs:
+    :return:
+    '''
+    items = os.listdir(root)
+    results = []
+    for item in items:
+        file = os.path.join(root, item)
+        if match_method(item):
+            results.append(file)
+        if not childs:
+            continue
+        if os.path.isdir(file):
+            r = serachPath(file,match_method,childs)
+            results += r
+    return results
+
+
+
 
 def writeLines(filename,lines,encode='utf-8',raiseError=False):
     try:
