@@ -75,6 +75,7 @@ def foreach(the_iterable,operation):
     for i in the_iterable:
         operation(i)
 
+
 def mapreduce(the_iterable,reducefunc,mapfunc=None,default=''):
     '''
     mapreduce操作
@@ -88,6 +89,7 @@ def mapreduce(the_iterable,reducefunc,mapfunc=None,default=''):
     if mapfunc is None and reducefunc is None:return default
     r1 = the_iterable if mapfunc is None else map(mapfunc,the_iterable)
     return r1 if reducefunc is None else reduce(reducefunc,r1)
+
 #endregion
 
 #region 集合性质判定

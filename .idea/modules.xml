@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://C:/pythonprj/dissertation/Evolvability/.idea/Evolvability.iml" filepath="C:/pythonprj/dissertation/Evolvability/.idea/Evolvability.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../ai/.idea/ai.iml" filepath="$PROJECT_DIR$/../ai/.idea/ai.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/neuroevolution.iml" filepath="$PROJECT_DIR$/.idea/neuroevolution.iml" />
     </modules>
   </component>

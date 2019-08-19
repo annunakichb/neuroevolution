@@ -240,7 +240,7 @@ def execute():
                 'deleteconnection':0.1                            # 删除连接的概率
             },
             'weight':{
-                'parallel': 0,  # 并行执行权重变异的线程个数，缺省0，可选
+                'parallel': 0,                                    # 并行执行权重变异的线程个数，缺省0，可选
                 'epoch':3,                                          # 权重调整次数
             }
         }
