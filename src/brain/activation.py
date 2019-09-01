@@ -22,7 +22,7 @@ class ActivationFunction:
         self.vars = {}  #激活函数的参量
 
     @classmethod
-    def calculate(cls,name,inputs,modelparams):
+    def calculate(cls,name,inputs,modelparams=None):
         '''
         激活函数执行
         :param name:     str or NameInfo
@@ -66,7 +66,7 @@ class Gaussian(ActivationFunction):
         return ['center','sigma']
 
     # 激活函数执行
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -101,7 +101,7 @@ class BipolarGaussian(ActivationFunction):
         return ['center','sigma']
 
     # 激活函数执行
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -137,7 +137,7 @@ class Sigmod(ActivationFunction):
         '''
         return ['a','b','T']
 
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -172,7 +172,7 @@ class BipolarSigmoid(ActivationFunction):
         '''
         return ['a','b','T']
 
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -204,7 +204,7 @@ class Linear(ActivationFunction):
         '''
         return []
 
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -236,7 +236,7 @@ class Sin(ActivationFunction):
         '''
         return [self.k,self.omega,self.f]
 
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入
@@ -264,7 +264,7 @@ class Sine(ActivationFunction):
         '''
         return [self.k,self.omega,self.f]
 
-    def calculate(self,inputs,params):
+    def calculate(self,inputs,params=None):
         '''
         计算函数
         :param inputs:      输入

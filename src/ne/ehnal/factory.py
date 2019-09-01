@@ -1,4 +1,5 @@
 
+import  numpy as np
 import evolution.agent as agent
 
 import brain.networks as networks

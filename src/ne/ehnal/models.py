@@ -7,7 +7,7 @@ Evolutionary Heterogeneous Neural Network Based on Attention Logic
 1. 变量：
 1.1 定义：
     变量是突触和神经元中定义的一组可变值，并在突触或神经元计算中使用。
-    如果变量值是系统配置中设置的，在运行时不再改变，则称为参数变量。
+    如果变量值是系统配置中设置的，在运行时不再改变，则称为参数(超参)变量。
     如果变量值是在系统运行中按照一定的学习规则改变的，则称为学习变量。
 1.2 变量由id，元信息，值，取值方式和范围（方式包括固定取值，随机取值(高斯分布，均匀分布)）五部分组成
     变量元信息包括名称，类型，缺省值，缺省取值方式和范围
@@ -24,17 +24,24 @@ E 权重可学习：参数变量，取值0表示权重是参数变量，不是�
 F 延时可学习：参数变量，取值0则表示延时是参数变量，不是学习变量
 E 计算模型id：参数变量，决定使用的是哪个计算模型
 2.4 计算模型：
-A  计算状态值 = 权重 * 输入状态值
-   状态时间 = 输入状态时间 + 延时
+A  状态时间 = 输入状态时间 + 延时
+B  计算状态值 = 权重 * 输入状态值
+C  计算状态值 = 输入状态值
+
 2.5 学习模型：
-2.5.1 权重学习模型：BP,遗传算法，强化学习
+2.5.1 权重学习模型：略，梯度下降,遗传算法，强化学习等已知方法
 2.5.2 延时学习模型：？
-2.5.3 强度学习模型：？
+2.5.3 强度学习模型：主要用于发育过程
+    A 强度初始值为1，每次上游神经元和下游神经元没有同步激活，则强度=强度-发育系数*超参，当递减到0的时候，该突触断开
+    B 强度初始值为1，强度=强度-发育系数*上游神经元和下游神经元激活频率的差绝对值，当减到0的时候，该突触断开
+
+2.6.突触集：多个突触组组成一个突触集，表示一个树突分支(一种简化的房室模型)
 
 三 神经元
 3.1 神经元的构成：多个突触组组成一个突触集，一组状态，一组学习变量和参数变量，一个关注逻辑表达式，一个计算模型,一个学习模型组成。
+2.2 神经元盒：多个神经元构成一个神经元盒，这些神经元内部
 3.2 突触组：表示一个树突分支(一种简化的房室模型)。
-3.3 状态包括：值，激活频率，激活状态，激活时间.
+3.3 状态包括：值，特征值，激活频率，激活时间.
 3.4 关注逻辑：
 3.4.1 关注值分布：（i.value）in 关注函数(pc,pw)   关注函数可以是gauss函数或者范围函数
 3.4.2 关注差值分布：(i1.value - i2.value) in 关注函数(pc,pw)
@@ -92,6 +99,7 @@ D.2 延时变量学习模型：随机进化
 from enum import Enum
 from utils.strs import NameInfo
 from utils.properties import Variable
+import utils.collections as collections
 
 class AttentionType(Enum):
     '''
@@ -125,6 +133,19 @@ class Attention:
         '''
         pass
 
+# 感知神经元计算模型(用于接收输入)
+class ReceptorModel:
+    nameInfo = NameInfo('receptor', cataory='attention')
+    __initStates = {}
+    __variables = [Variable(nameInfo='center', application='learn'), Variable(nameInfo='sigma', application='learn')]
+
+    def __init__(self,**configuration):
+        self.nameInfo = AttentionNeuronModel.nameInfo
+        self.configuration = configuration
+        self.initStates = AttentionNeuronModel.__initStates
+        self.variables = AttentionNeuronModel.__variables
+
+
 # 基本神经元计算模型（权重和加激活函数）
 class AttentionNeuronModel:
     nameInfo = NameInfo('attention', cataory='attention')
@@ -151,20 +172,18 @@ class AttentionNeuronModel:
         # 取得时钟信息
         lastclock, clock, clockstep = clockinfo
 
-        # 取得神经元的关注表达式对象
-        attentation = neuron.getVariableValue('attentation')
+
 
         # 取得待计算突触的输入突触
         synapses = net.getSynapses(toId=neuron.id)
-        if synapses is None or len(synapses)<=0:return None
-
-        # 检查输入突触是否有刺激到达
-        for i,synapse in enumerate(synapses):
-            pass
+        if synapses is None or len(synapses) <= 0: return None
 
         # 检查突触是否都有值
         if not collections.all(synapses,lambda s:'value' in s.states.keys()):
             return None
+
+        # 取得神经元的关注表达式对象
+        attentation = neuron.getVariableValue('attentation')
 
         # 取得突触所有输入值并求和(权重已经计算)
         inputs = list(map(lambda s:s.states['value'],synapses))

@@ -187,10 +187,21 @@ class EvolutionTask:
         进化任务，一个进化任务是将多次执行进化，每次进化为一个session
         :param count:     int 运行次数
         :param popParam:  dict 种群参数
+        :param callback:  function(event,monitor) 回调函数
+                            monitor Monitor对象
+                            event   str 包括
+                                    'task.begin'
+                                    'epoch.begin'
+                                    'session.begin'
+                                    'session.end'
+                                    'epoch.end'
+                                    'task.end'
         '''
         self.count = count
-        popParam = Properties(popParam)
-        popParam.genomeDefinition = Properties(popParam.genomeDefinition)
+        if isinstance(popParam,dict):
+            popParam = Properties(popParam)
+        if isinstance(popParam.genomeDefinition,dict):
+            popParam.genomeDefinition = Properties(popParam.genomeDefinition)
         self.popParam = popParam
 
         self.runParam = None
@@ -208,7 +219,8 @@ class EvolutionTask:
         :param runParam: 运行参数
         :return:
         '''
-        runParam = Properties(runParam)
+        if isinstance(runParam,dict):
+            runParam = Properties(runParam)
         self.runParam = runParam
         self.monitor = Monitor(self,callback = self.callback)
 

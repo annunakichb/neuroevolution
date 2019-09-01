@@ -31,6 +31,7 @@ class IndividualType:
 
 #个体类型注册表
 individualTypes = Registry()
+
 #种群类型注册表
 speciesType = Registry()
 
