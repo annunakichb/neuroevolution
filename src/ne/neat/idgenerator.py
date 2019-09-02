@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import  utils.collections as collections
 from functools import reduce
 

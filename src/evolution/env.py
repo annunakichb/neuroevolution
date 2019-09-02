@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from functools import reduce
 from utils.collections import ExtendJsonEncoder
 import  utils.strs as strs

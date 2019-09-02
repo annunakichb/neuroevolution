@@ -1,4 +1,5 @@
-import  domains.vee.env as env
+# -*- coding: UTF-8 -*-
+
 import  evolution
 from evolution.session import EvolutionTask
 import numpy as np

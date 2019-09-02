@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# -*- coding: UTF-8 -*-
 
 '''
 该实验研究EHNAL(Evolutionary Heterogeneous Neural Network Based on Attention Logic)如何将物体向特定位置的移动。

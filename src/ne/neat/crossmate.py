@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import brain.networks as networks
 from evolution.agent import Individual
 from .selection import NeatSelection

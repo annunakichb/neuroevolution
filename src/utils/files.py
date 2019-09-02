@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import os
 import utils.strs as strs
 import utils.collections as collections

@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from evolution.agent import IndividualType
 import evolution.agent as agent
 import  evolution

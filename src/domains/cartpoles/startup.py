@@ -16,8 +16,6 @@ import os
 import csv
 
 import domains.ne.cartpoles.enviornment.force as force
-from domains.ne.cartpoles.enviornment.force import  ForceGenerator
-from domains.ne.cartpoles.enviornment.cartpole import  SingleCartPoleEnv
 import domains.ne.cartpoles.dqn_cartpole as dqnrunner
 import domains.ne.cartpoles.ddqn_cartpole as ddqnrunner
 import domains.ne.cartpoles.neat_feedforeward as neatrunner

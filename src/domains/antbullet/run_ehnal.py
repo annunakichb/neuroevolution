@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 # 该实验测试关注逻辑网络控制ant移动的效果
 import pybullet
 import gym
@@ -147,8 +149,8 @@ class Receptor(Box):
         :return:
         '''
         # 判断是否要分裂节点：当节点容量达到最大，且能耗没有超过上限，节点分裂，采用带权重样本改进EM算法
-        for node in self.nodes:
-            if node.states['firecount'] >= Node.
+        for node in self.nodes:pass
+            #if node.states['firecount'] >= Node.
     def _exploration_or_exploitation(self,t):
         '''
         # 判断启动学习过程的条件是否满足，有几种判断方法：
@@ -172,3 +174,4 @@ def fitness(ind,session):
     env.reset()
 
 def run():
+    pass

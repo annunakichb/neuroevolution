@@ -1,6 +1,6 @@
 
 
-__all__ = ['crossmate','idgenerator','mutate','selection','neat_init']
+__all__ = ['crossmate','idgenerator','mutate','selection','neat_init', 'config']
 
 import brain.networks as networks
 from brain.networks import NeuralNetwork

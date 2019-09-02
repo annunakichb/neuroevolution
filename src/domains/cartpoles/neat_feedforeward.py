@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import matplotlib.pyplot as plt
 import gc
 import numpy as np

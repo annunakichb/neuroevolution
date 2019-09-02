@@ -1,6 +1,5 @@
+# -*- coding: UTF-8 -*-
 
-from .properties import *
-from .properties import Registry
 
 __all__ = ['FORMAT','isVaild','vaild','equals','getName','format']
 
@@ -48,33 +47,6 @@ def equals(str1,str2,ignoreCase = True):
 #endregion
 
 #region 对象的序列化
-
-def getName(obj):
-    '''
-    取得对象名称，按照以下顺序查找名称字符串:对象是否有getName方法，是否有__name__字段，是否有name字段，是否有nameInfo字段
-                以上字段如果类型是str，则直接返回，如果是NameInfo，则返回其中的name字段
-    如果该对象类型本身就是字符串，则直接返回
-    其它情况将得到''
-    :param obj:
-    :return:
-    '''
-    if obj is None:return ''
-    if obj is str:return str(obj)
-
-    if hasattr(obj,'getName'):
-        return obj.getName()
-    nameAttr = None
-    if hasattr(obj,'__name__'):
-        nameAttr = obj.__name__
-    elif hasattr(obj,'name'):
-        nameAttr = obj.name
-    elif hasattr(obj,'nameInfo'):
-        nameAttr = obj.nameInfo
-
-    if nameAttr is None:return ''
-    elif nameAttr is str:return str(nameAttr)
-    elif nameAttr is NameInfo:return nameAttr.name
-    else: return str(nameAttr)
 
 
 # 存储格式说明
@@ -150,7 +122,7 @@ class Command:
         if not isVaild(text):return False
         return self.parser.cmdMath(text)
 
-cmdRegistry = Registry()
+
 
 #endregion
 

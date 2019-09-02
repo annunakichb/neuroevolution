@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import numpy as np
 from ne.negp.elements import FeatureNeuronBox
 
@@ -87,8 +89,6 @@ def receptivefield():
     for generation in range(10000):
         # 计算适应度
         for ind in pops:
+            pass
 
 
-            # 选择
-            # 交叉
-            # 变异

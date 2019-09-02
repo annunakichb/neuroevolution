@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from random import choice, random, shuffle
 from functools import reduce
 import  numpy as np

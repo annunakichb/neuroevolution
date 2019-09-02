@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from functools import reduce
 import random
 import logging

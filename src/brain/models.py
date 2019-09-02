@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from utils import strs as strs
 from utils import collections as collections
 from utils.properties import *

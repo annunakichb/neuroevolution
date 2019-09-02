@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from utils.properties import Properties
 from evolution.env import Evaluator
 from evolution.agent import IndividualType
@@ -19,8 +21,8 @@ def createPopParam(**kwargs):
     popParam = {
         'indTypeName': 'dict'  if 'indTypeName' not in kwargs else kwargs['indTypeName'],  # 种群的个体基因类型名，必须，该类型的个体基因应已经注册过，参见evolution.agent,必须
         'genomeFactory': None if 'genomeFactory' not in kwargs else kwargs['genomeFactory'],  # 基因工厂，个体类型中已经提供了基因工厂对象，这里如果设置，可以替换前者，可选
-        'factoryParam': {} if 'factoryParam' not in kwargs else kwargs['factoryParam'],
-        'genomeDefinition': None if 'genomeDef' not in kwargs else kwargs['genomeDef'],  # 基因定义参数,可选
+        'factoryParam': {'connectionRate':1.0} if 'factoryParam' not in kwargs else kwargs['factoryParam'],
+        'genomeDefinition': None if 'genomeDefinition' not in kwargs else kwargs['genomeDefinition'],  # 基因定义参数,可选
         'size': kwargs['size'],  # 种群大小，必须
         'elitistSize': 0.1 if 'elitistSize' not in kwargs else kwargs['elitistSize'],  # 精英个体占比，小于1表示比例，大于等于1表示数量
         'species': {  # 物种参数，可选
@@ -31,7 +33,7 @@ def createPopParam(**kwargs):
     evaluators = None if 'evaluators' not in kwargs else kwargs['evaluators']
     if evaluators is None:
         return Properties(popParam)
-    if isinstance(evaluators,function):
+    if callable(evaluators):
         popParam['features'] =  {  # 特征评估函数配置，必须
             'fitness': Evaluator('fitness', [(evaluators, 1.0)]) if 'evaluator' not in kwargs else kwargs['evaluator']# 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
@@ -42,7 +44,7 @@ def createPopParam(**kwargs):
     return Properties(popParam)
 
 
-def createRunParam(operations,maxIterCount=10000,maxFitness=0,**kwargs):
+def createRunParam(maxIterCount=10000,maxFitness=0,operations='neat_selection,neat_crossmate,neat_mutate',**kwargs):
     if kwargs is None:kwargs = {}
     # 定于运行参数
     runParam = {

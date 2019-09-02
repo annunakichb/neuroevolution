@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from multiprocessing import Pool
 from concurrent.futures import ThreadPoolExecutor,as_completed,wait,ALL_COMPLETED,FIRST_COMPLETED
 from evolution.env import EvaluationValue

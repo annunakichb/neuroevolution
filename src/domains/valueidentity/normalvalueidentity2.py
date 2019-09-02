@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 
 import pygraphviz as pgv
 import matplotlib.mlab as mlab

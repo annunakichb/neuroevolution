@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 
 import utils.collections as collections
 from brain.viewer import NetworkView

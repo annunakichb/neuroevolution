@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 from enum import Enum
 import  numpy as np
 import networkx as nx

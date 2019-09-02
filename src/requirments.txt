@@ -1,0 +1,5 @@
+prompt_toolkit==2.0.9
+pygments==2.4.2
+networkx=2.3
+community=1.0.0b1
+sklearn=0.0

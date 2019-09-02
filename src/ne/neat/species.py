@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import numpy as np
 from scipy.cluster.vq import vq,kmeans,whiten
 
