@@ -15,6 +15,8 @@ import evolution
 import domains.antbullet.env as env
 from brain.networks import NeuralNetworkTask
 
+def callback(event,monitor):
+    print('event=%s,monitor=%s' % (event,str(monitor)))
 if __name__ == '__main__':
     # NEAT 前馈网络
     neat.neat_init()
@@ -28,5 +30,5 @@ if __name__ == '__main__':
                                     evaluators=env.fitness)
     runParam = evolution.createRunParam()
 
-    evolutionTask = EvolutionTask(1,popParam,None)
+    evolutionTask = EvolutionTask(1,popParam,callback)
     evolutionTask.execute(runParam)

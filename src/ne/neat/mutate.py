@@ -178,9 +178,46 @@ class NeatMutate:
         session.monitor.recordDebug(NeatMutate.name, 'ind'+str(ind.id)+'删除连接',str(s.id))
         return True, '','deleteconnection', s
 
+    def __doWeightTrain(self, ind, session):
+        if session.runParam.mutate.weight.method == 'nes':
+            self.__doWeightTrain_nes(ind,session)
+        else:
+            self.__doWeightTrain_random(ind,session)
+
+    def __doWeightTrain_nes(self, ind, session):
+        net = ind.getPhenome()
+        origin_fitness = ind['fitness']
+        synapses = net.getSynapses()
+        neurons = net.getHasVarNeurons('bias')
+        old_weights = [s['weight'] for s in synapses]
+        old_bias = [n['bias'] for n in neurons]
+        params = old_weights + old_bias
+        evoluator = session.pop.params.features['fitness']
+
+        def f(params,ind):
+            '''
+            计算适应度值
+            :param params: 与适应度函数不同的是，这里的params是权重和偏置组成的list
+            :param ind:
+            :return:
+            '''
+            new_weights = params[:len(old_weights)]
+            new_bias = params[len(old_weights):]
+            for index, s in enumerate(synapses):
+                s['weight'] = new_weights[index]
+            for index, n in enumerate(neurons):
+                n['bias'] = new_bias[index]
+            return evoluator.calacute(ind, session)
+
+        from nes.nature_es import NaturalEvolutionStrategies
+        es = NaturalEvolutionStrategies(f,params,ind)
+        params = es.run()
+        new_fitness = evoluator.calacute(ind, session)
+
+        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(origin_fitness)+",diff="+str(origin_fitness - origin_fitness))
 
 
-    def __doWeightTrain(self,ind,session):
+    def __doWeightTrain_random(self,ind,session):
         net = ind.genome
         synapses = net.getSynapses()
         neurons = net.getHasVarNeurons('bias')

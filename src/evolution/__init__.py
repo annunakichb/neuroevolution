@@ -82,6 +82,7 @@ def createRunParam(maxIterCount=10000,maxFitness=0,operations='neat_selection,ne
                 'deleteconnection': 0.1  if 'mutate_deleteconnection' not in kwargs else kwargs['mutate_deleteconnection']  # 删除连接的概率
             },
             'weight': {
+                'method':'nes',
                 'parallel': 0 if 'weight_parallel' not in kwargs else kwargs['weight_parallel'],  # 并行执行权重变异的线程个数，缺省0，可选
                 'epoch': 1 if 'weight_epoch' not in kwargs else kwargs['weight_epoch'],  # 权重调整次数
             }
