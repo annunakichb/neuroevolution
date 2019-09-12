@@ -97,6 +97,10 @@ class Monitor:
         self.__recordSection('种群创建',完成情况='成功' if exception is None else str(exception),个体数量=len(pop.inds))
         if self.callback is not None: self.callback('pop.create', self)
 
+    def recordPopulationFeaturesEvaulate(self):
+        self.__recordSection('评估启动')
+        if self.callback is not None: self.callback('evaulate.begin', self)
+
     def recordPopulationFeatures(self):
         kwdatas = {}
         #keys = self.evoTask.curSession.pop.features.keys()

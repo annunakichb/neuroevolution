@@ -91,8 +91,10 @@ class Session:
             self.monitor.recordPopulationCreate(self.pop,e)
 
         # 计算种群特征
+        self.monitor.recordPopulationFeaturesEvaulate()
         self.pop.evaulate(self)
         self.monitor.recordPopulationFeatures()
+
         self.monitor.recordIndividuals()
         self.popRecords.append(self.__createPopRecord())
 
@@ -171,6 +173,7 @@ class Session:
         return self.runParam.operations.text.split(',')
 
     def __createPopRecord(self):
+        '''取得所有种群所有评估特征的最大，平均，最小和标准差'''
         r = {}
         #for featureKey in self.pop.params.features.keys():
         for featureKey in self.pop.params.features:

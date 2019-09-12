@@ -16,7 +16,7 @@ import domains.antbullet.env as env
 from brain.networks import NeuralNetworkTask
 
 def callback(event,monitor):
-    print('event=%s,monitor=%s' % (event,str(monitor)))
+    print('event=%s' % (event))
 if __name__ == '__main__':
     # NEAT 前馈网络
     neat.neat_init()
@@ -24,10 +24,12 @@ if __name__ == '__main__':
     task = NeuralNetworkTask()
     netdef = config.createNetDef(task,neuronCounts=[34,8])
     popParam = evolution.createPopParam(indTypeName='network',
-                                    size=1000,
+                                    size=10,
                                     elitistSize=0.01,
                                     genomeDefinition=netdef,
-                                    evaluators=env.fitness)
+                                    evaluators=env.fitness,
+                                    species=config.defaultSpeciesMethod()
+    )
     runParam = evolution.createRunParam()
 
     evolutionTask = EvolutionTask(1,popParam,callback)

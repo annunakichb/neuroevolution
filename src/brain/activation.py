@@ -147,7 +147,11 @@ class Sigmod(ActivationFunction):
         a = params.get('a',self.a)
         b = params.get('b',self.b)
         T = params.get('T', self.T)
-        value = a/(b*(1+math.exp(-T*inputs)))
+        value = 0.
+        try:
+            value = a/(b*(1+math.exp(-T*inputs)))
+        except OverflowError as err:
+            print("activation error: {0},inputs={1}".format(err,inputs))
         return value,value>0.5
 
 class BipolarSigmoid(ActivationFunction):

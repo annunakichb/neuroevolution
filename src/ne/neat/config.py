@@ -52,3 +52,9 @@ def createNetDef(task,**kwargs):
     }
     return Properties(netdef)
 
+def defaultSpeciesMethod():
+    return {'method': 'neat_species',  # 物种分类方法,在物种参数中必须
+     'alg': 'kmean',  # 算法名称
+     'size': 5,  # 物种个体数量限制，0表示无限制或动态
+     'iter': 50  # 算法迭代次数
+     }

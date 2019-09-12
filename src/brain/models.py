@@ -102,7 +102,7 @@ class CommonHiddenNeuronModel:
             elif name in activationFunctionConfig:activationParams[name] = activationFunctionConfig[name]
 
         # 用输入和计算激活函数
-        value,activation = neuron.activationFunction.calculate(sum,activationParams) #?这里有问题，激活函数的参数无法传入
+        value,activation = neuron.activationFunction.calculate(sum,activationParams)
 
         # 记录状态
         neuron.states['value'] = value

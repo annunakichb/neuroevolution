@@ -13,6 +13,7 @@ import paddle
 rendering = False
 
 class Posture:
+    '''机器人姿态数据'''
     def __init__(self,obs):
         self.pos = obs[:3]
         self.speed = obs[6:9]
@@ -59,59 +60,37 @@ class Posture:
 
         self.foots = [self.front_left_foot,self.front_right_foot,self.left_back_foot,self.right_back_foot]
     def groudfoots(self):
+        '''
+        取得着地脚的名字
+        :return:
+        '''
         return [foot.name for foot in self.foots if foot.groud != 0]
     def groudcode(self):
+        '''
+        着地脚的序号
+        :return:
+        '''
         return [0 if foot.ground==0 else 1 for foot in self.foots]
     def __str__(self):
         return '位置=%.3f,%.3f,%.3f;速度=%.3f,%.3f,%.3f;着地脚=%s' % \
                (self.pos[0],self.pos[1],self.pos[2],
                 self.speed[0],self.speed[1],self.speed[2],str(self.groudfoots()))
 
+    def getKontPos(self):
+        '''
+        获取关节姿态
+        :return:
+        '''
+        return [self.front_left_foot.up.pos,self.front_left_foot.up.angle,
+                self.front_left_foot.down.pos,self.front_left_foot.down.angle,
+                self.front_right_foot.up.pos,self.front_right_foot.up.angle,
+                self.front_right_foot.down.pos,self.front_right_foot.down.angle,
+                self.left_back_foot.up.pos,self.left_back_foot.up.angle,
+                self.left_back_foot.down.pos,self.left_back_foot.down.angle,
+                self.right_back_foot.up.pos,self.right_back_foot.up.angle,
+                self.right_back_foot.down.pos,self.right_back_foot.down.angle]
 
 
-def advancement(ind,session):
-    '''
-    个体行为先进度，根据四足的姿态信息确定适应度
-    （1）四足机器人的输入输出
-    四足机器人的输入维度是8，分别是四个腿上下两个关节的输入扭矩
-    注：这四个关节的顺序总是'front_left_foot', 'front_right_foot', 'left_back_foot', 'right_back_foot‘
-    四足机器人的输出维度是24，分别是四足机器人的姿态数据，包括
-    1-3：四足机器人相对于起点的坐标x,y,z
-    4-5:四足机器人相对于目标的x轴和y轴距离
-    6-8：四足机器人在x，y，z三个方向的速度
-    9-24：四足机器人每个关节的位置和角度度，其中奇数下标记录角度度，偶数下标记录位置（位置的含义目前不清楚...）
-    25-28：四个足是否碰到地面，0是没有碰到
-    你可能会奇怪为什么没有朝向，因为这个四足机器人是完全对称的
-    （2）控制网络的输入输出
-    控制网络的输入是 24 + 1 + 3 + 3 + 3
-    分别是四足机器人姿态（24），目标类型（1），目标位置（3），目标移动速度（3），目标移动方向(3)
-    目标类型：0为无效目标，1为猎物；2为原地转向（此时目标位置为转向）
-    控制网络的输出是8，分别是按照下面顺序的四个腿的上关节和下关节的扭矩：'
-
-    对机器人的行为进行行为先进度测试，测试的结果为两个值，第一个值是行为先进度等级：第二个值是该等级的行为能力值
-    1 关节能动： 行为能力值为同时能动的关节数*（关节变化位置幅度+关节变化角度），归一化到0-1之间
-    2 腿能离地： 行为能力值为腿能规则离地的次数
-    3 能移动位置：行为能力值总为1
-    4 能走直线：  行为能力值为直线的均方误差的倒数
-    5 能转弯：行为能力值为
-    6 能在行走中转弯
-    7 能在行走中改变速度
-    0 是否能动腿：有腿移动，控制关节位置在特定范围内变化，控制多个关节位置在特定范围组合内变化，控制多个关节按照一定时序在特定范围内变化
-    1.是否走直线：直线
-    2.转动：转动，指定顺（逆）时针转动，指定转动角度，指定转动角度和速度
-    3.行走中转弯：行走转弯，行走按照特定方向转弯，同时转动特定角度，转动并走到特定位置，在限定的时间内
-    4.走到指定位置：走到指定位置，直线走到指定位置，沿特定路线走到指定位置，沿特定路线给定速度走到指定位置
-    5.变速：接收加减速指令，按照指定加速度行走，先加速再减速
-    6.规避障碍物：规避单个静止障碍物，规避多个静止障碍物，规避一个移动障碍物，规避多个移动障碍物
-    7.追逐猎物
-    :param ind:
-    :param session:
-    :return:
-    '''
-    pybullet.connect(pybullet.DIRECT)
-    env = gym.make("AntBulletEnv-v0")
-    env.render(mode="human")
-    init_obs = env.reset()
 
 class ProgressivenesMap:
     pass

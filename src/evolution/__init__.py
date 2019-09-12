@@ -25,10 +25,7 @@ def createPopParam(**kwargs):
         'genomeDefinition': None if 'genomeDefinition' not in kwargs else kwargs['genomeDefinition'],  # 基因定义参数,可选
         'size': kwargs['size'],  # 种群大小，必须
         'elitistSize': 0.1 if 'elitistSize' not in kwargs else kwargs['elitistSize'],  # 精英个体占比，小于1表示比例，大于等于1表示数量
-        'species': {  # 物种参数，可选
-            'method': '' if 'speciesMethod' not in kwargs else kwargs['speciesMethod'],  # 物种分类方法,在物种参数中必须
-            'params': {} if 'speciesParams' not in kwargs else kwargs['speciesParams']
-        }
+        'species': {} if 'species' not in kwargs else kwargs['species']
     }
     evaluators = None if 'evaluators' not in kwargs else kwargs['evaluators']
     if evaluators is None:
