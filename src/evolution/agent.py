@@ -98,8 +98,8 @@ class Individual:
             self.features[key] = EvaluationValue()
         self.features[key].append(value)
 
-    def getFeature(self,name):
-        return self.features.get(name)
+    def getFeature(self,name,default=None):
+        return self.features.get(name,default)
 
     def __str__(self):
         return self._getFeatureStr() + ":" + str(self.genome) + ""
@@ -174,6 +174,7 @@ class Population:
                 for ind in self.inds:
                     value = evoluator.calacute(ind,session)
                     ind[key] = value
+                    print('.........: ind',str(ind.id),'.',key,'=',value)
 
             # 计算所有个体评估值的平均，最大和最小
             max,avg,min,stdev = collections.rangefeature(list(map(lambda i:i[key],self.inds)))
@@ -182,6 +183,7 @@ class Population:
             self[key]['average'] = avg
             self[key]['min'] = min
             self[key]['stdev'] = stdev
+            print('.........: population','.', key, '=', max,avg,min,stdev)
 
         # 按照适应度值排序
         self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)

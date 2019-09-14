@@ -186,7 +186,7 @@ class NeatMutate:
 
     def __doWeightTrain_nes(self, ind, session):
         net = ind.getPhenome()
-        origin_fitness = ind['fitness']
+        origin_fitness = 0.0 if 'fitness' not in ind.features else ind['fitness']
         synapses = net.getSynapses()
         neurons = net.getHasVarNeurons('bias')
         old_weights = [s['weight'] for s in synapses]
@@ -213,10 +213,15 @@ class NeatMutate:
 
         from es.nes import NES
         es = NES()
-        params = es.run(f,params,ind,False,False)
+        newparams,new_fitness = es.run(f,params,ind,False,False)
+        new_weights = newparams[:len(old_weights)]
+        new_bias = newparams[len(old_weights):]
+        for index, s in enumerate(synapses):
+            s['weight'] = new_weights[index]
+        for index, n in enumerate(neurons):
+            n['bias'] = new_bias[index]
 
-        new_fitness = evoluator.calacute(ind, session)
-        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(origin_fitness)+",diff="+str(origin_fitness - origin_fitness))
+        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(new_fitness)+",diff="+str(new_fitness - origin_fitness))
 
 
 

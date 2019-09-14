@@ -2,13 +2,12 @@ import sys
 import inspect
 import logging
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
 import utils.collections as collections
 
 # 自然进化策略：修改自https://github.com/callaunchpad/NES/blob/master/algorithm.py
 class NESConfig():
-    def __init__(self,learning_rate=0.2,noise_std_dev=0.4,n_populations=100,n_individuals=5,max_rewards=0.8,save_directory=''):
+    def __init__(self,learning_rate=0.2,noise_std_dev=0.4,n_populations=10,n_individuals=5,max_rewards=0.8,save_directory=''):
         self.learning_rate = learning_rate
         self.noise_std_dev = noise_std_dev
         self.n_populations = n_populations
@@ -26,7 +25,8 @@ class NES():
         n_reached_target = []
         population_rewards = []
         master_params = init_params
-        max_reward = 0.
+        max_reward = 0.0 if 'fitness' not in context.features else context['fitness']
+        max_params = init_params
         for p in range(self.config.n_populations):
             noise_samples = np.random.randn(self.config.n_individuals,len(master_params))
             rewards = np.zeros(self.config.n_individuals)
@@ -37,7 +37,8 @@ class NES():
                 n_individual_target_reached += rewards[i] == 1
             if max(rewards)>max_reward:
                 max_reward = max(rewards)
-                print('NES evolution->max_reward=',max_reward,'context=',str(context))
+                max_params = sample_params
+                #print('NES evolution->max_reward=',max_reward,'context=',str(context))
             master_params = self.update(master_params,noise_samples,rewards)
             n_reached_target.append(n_individual_target_reached)
             population_rewards.append(sum(rewards)/len(rewards))
@@ -45,9 +46,10 @@ class NES():
                 self.plot_graphs([range(p+1), range(p+1)], [population_rewards, n_reached_target], ["Average Reward per population", "Number of times target reached per Population"], ["reward.png", "success.png"], ["line", "scatter"])
 
             if collections.any(rewards,lambda r:r>=self.config.max_rewards):
-                return master_params
+                return max_params,max_reward
+                #return master_params
 
-        return master_params
+        return max_params,max_reward
 
     def update(self, master_params, noise_samples, rewards):
         '''参数每次list(迭代更新实现在这里，没有完全看懂，好像跟论文中说的不一样，先照用'''

@@ -13,12 +13,7 @@ from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
 from brain.runner import NeuralNetworkTask
-#import brain.networks as networks
 
-import scipy
-import scipy.cluster.hierarchy as sch
-from scipy.cluster.vq import vq,kmeans,whiten
-from sklearn import cluster
 
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
