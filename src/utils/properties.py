@@ -248,8 +248,9 @@ class Properties(dict):
 
     def __getattr__(self, name):
         value = self[name]
-        if isinstance(value, dict):
+        if isinstance(value, dict) and not isinstance(value,Properties):
             value = Properties(value)
+            self[name] = value
         return value
 
     def __setattr__(self, key, value):

@@ -7,6 +7,7 @@ from evolution.env import EvaluationValue
 from utils.properties import Registry
 import utils.collections as collections
 import utils.strs as strs
+from evolution.env import EvaluationValues
 
 import  numpy as np
 
@@ -86,6 +87,11 @@ class Individual:
     def getCachedPhenome(self):
         return self._cachedPhenome
 
+    @property
+    def fitness(self):
+        values = [f.value for f in self.features]
+        return EvaluationValues(values)
+
     def __getitem__(self, item):
         #if item in self.features.keys():
         if item in self.features:
@@ -126,6 +132,7 @@ class Population:
         self.features = {}
         self.eliest = []
         self.species = []
+        EvaluationValues.weights = tuple([f[1] for f in params.features])
 
     @classmethod
     def create(cls,popParam):

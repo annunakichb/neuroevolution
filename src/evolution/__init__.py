@@ -34,9 +34,14 @@ def createPopParam(**kwargs):
         popParam['features'] =  {  # 特征评估函数配置，必须
             'fitness': Evaluator('fitness', [(evaluators, 1.0)]) if 'evaluator' not in kwargs else kwargs['evaluator']# 适应度评估器,如果评估器只包含一个函数,也可以写成Evaluator('fitness',fitness)
         }
-    elif isinstance(evaluators,list):
+    elif isinstance(evaluators, list):
+        popParam['features'] = {}
         for evaluator in evaluators:
-            popParam['features'][evaluator.key] = evaluator
+            popParam['features'][evaluator[2]] = Evaluator(evaluator[2],[(evaluator[0],evaluator[1])])
+    elif isinstance(evaluators,tuple):
+        popParam['features'] = {}
+        for key,evaluator in evaluators.items():
+            popParam['features'][key] = Evaluator('key',[(evaluator[0],evaluator[1])])
 
     return Properties(popParam)
 
@@ -61,6 +66,7 @@ def createRunParam(maxIterCount=10000,maxFitness=0,operations='neat_selection,ne
             # 'method' : 'neat',                                   # 已有的进化操作序列名称，与text两个只用一个
             'text': operations  # 进化操作序列
         },
+        'selection': kwargs['selection'] if 'selection' in kwargs else {},
         'mutate': {
             'propotion': 0.1 if 'mutate_propotion' not in kwargs else kwargs['mutate_propotion'],  # 变异比例,有多少个个体参与变异，小于等于1表示比例，大于1表示固定数量
             'parallel': 0 if 'mutate_parallel' not in kwargs else kwargs['mutate_parallel'],  # 并行执行变异的线程个数，缺省0，可选
