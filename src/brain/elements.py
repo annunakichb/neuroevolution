@@ -209,6 +209,13 @@ class Synapse(NeuralElement):
                #+ (',' + stateStr if strs.isVaild(stateStr) else '') \
 
 
+class Effector(NeuralElement):
+    '''
+    效应器,用于控制自身身体的某部位，如机器人的某个关节
+    '''
+    def __init__(self,id,birth,modelConfiguration,coord=None):
+        super(Effector,self).__init__(id, birth, modelConfiguration, coord)
+
 class Module:
     def __init__(self,id,birth,fromModuleIds,toModuleIds,neuronIds):
         '''

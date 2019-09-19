@@ -1,20 +1,17 @@
 import ne
-import brain.networks as networks
-from brain.networks import NeuralNetwork
-from evolution.agent import IndividualType
 import evolution.session as session
 import evolution.agent as agent
 
 from ne.ehnal import EhnalNeuralNetworkGenomeFactory
 
-import utils.collections as collections
-from evolution.idgenerator import NeatIdGenerator
-from evolution.selection import NeatSelection
-from evolution.mutate import NeatMutate
-from evolution.crossmate import NeatCrossmateOperation
-from evolution.species import NeatSpeciesMethod
+
 
 __all__ = ['EhnalNeuralNetworkGenomeFactory','idgenerator','mutate','selection','ehnal_init']
+
+###############################################################################################
+#############################基于关注逻辑的特征神经元网络############################################
+####################Feature neuron network based on attention logic############################
+###############################################################################################
 
 
 def ehnal_init():
