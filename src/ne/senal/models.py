@@ -1,5 +1,14 @@
 #!/usr/bin/python3
 
+from brain.models import CommonInputNeurnModel
+
+class BoxModel():
+    def __init__(self,**configuration):
+        super(BoxModel, self).__init__()
+
+
+
+
 '''
 EHNAL
 Evolutionary Heterogeneous Neural Network Based on Attention Logic

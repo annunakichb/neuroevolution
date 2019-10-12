@@ -2,7 +2,7 @@ import ne
 import evolution.session as session
 import evolution.agent as agent
 
-from ne.ehnal import EhnalNeuralNetworkGenomeFactory
+from ne.senal import EhnalNeuralNetworkGenomeFactory
 
 
 
@@ -17,6 +17,8 @@ __all__ = ['EhnalNeuralNetworkGenomeFactory','idgenerator','mutate','selection',
 def ehnal_init():
     # 神经元进化模块初始化
     ne.neuroevolution_init()
+
+
 
     # 注册物种划分对象
     agent.speciesType.register(NeatSpeciesMethod(), 'neat_species')

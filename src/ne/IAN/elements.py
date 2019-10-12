@@ -1,9 +1,8 @@
 
-
 class BoxGene:
-    def __init__(self,id,inputboxs,outputboxs,initdistribution,type,attributes):
+    def __init__(self,id,inputboxs,outputboxs,initdistribution,type,attributes,desctemplate):
         '''
-        神经元盒子基因,在这种网络中，基因不是编码神经元而是神经元盒子
+        神经元盒子基因
         :param id:               int  神经元盒子编号
         :param inputboxs:        list of int 输入盒子的编号集
         :param outputboxs:       list of int 输出盒子的编号集
@@ -18,14 +17,12 @@ class BoxGene:
                                         这个盒子里的感光细胞将对图像中某个固定位置的像素的值做出响应，图像的位置坐标就称为该神经元盒子的空间属性
                                         如果盒子对某个时序序列的固定时间点做出响应，则该盒子的属性为该时间点
                                         字典的key为属性名，其中's'和't'固定代表空间属性和时间属性
+        :param desctemplate:     str 完全是为了打印输出。当需要打印输出盒子的属性或状态的时候，该字符串为输出模版，输出模版都是在网络进化任务完成以后，
+                                     人为的补充的
         '''
         self.id = id
         self.inputs = inputboxs
         self.outputs = outputboxs
         self.initdistribution = initdistribution
         self.attributes = attributes
-
-class Box:
-    def __init__(self,gene):
-        self.gene = gene
-        self.elements = []
+        self.desctemplate = desctemplate

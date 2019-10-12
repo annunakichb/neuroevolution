@@ -162,8 +162,8 @@ class Posture:
                 self.speed[0],self.speed[1],self.speed[2])
     def print(self):
         print('左前脚落地=', self.front_left_foot.ground)
-        print('左前脚上关节: pos=%.5f,angle=%.3f' % (self.front_left_foot.up.pos, self.front_left_foot.up.angle))
-        print('左前脚下关节: pos=%.5f,angle=%.3f' % (self.front_left_foot.down.pos, self.front_left_foot.down.angle))
+        print('左前脚上关节: pos=%.2f,angle=%.2f' % (self.front_left_foot.up.pos, self.front_left_foot.up.angle))
+        print('左前脚下关节: pos=%.2f,angle=%.2f' % (self.front_left_foot.down.pos, self.front_left_foot.down.angle))
 
 
     def getKontPos(self):

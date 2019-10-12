@@ -12,7 +12,7 @@
 '''
 
 import ne
-import ne.ehnal as ehnal
+import ne.senal as ehnal
 import ne.callbacks as callbacks
 from brain.networks import NetworkType
 from brain.networks import NeuralNetwork
@@ -50,7 +50,7 @@ def fitness(ind,session):
 
 def run():
     # 初始化算法模块
-    ehnal.ehnal_init()
+    senal.ehnal_init()
 
     # 定义网络
     netdef = {

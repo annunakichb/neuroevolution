@@ -6,6 +6,21 @@ import gym
 import numpy as np
 import utils.collections as collections
 
+class BoxType:
+
+    def __init__(self,a,name):
+        self.a = a
+        self.name = name
+
+box_E = BoxType('E',['均值',''])
+box_V = BoxType('V',['方差',''])
+box_T = BoxType('T',['时序',''])
+box_D = BoxType('D',['方向',''])
+box_S = BoxType('S',['速度',''])
+box_A = BoxType('A',['加速度',''])
+box_PD = BoxType('PD',['属性方向',''])
+box_type = [box_E,box_V,box_T,box_D,box_S,box_A]
+
 class BoxGene:
     def __init__(self,id,inputboxs,outputboxs,initdistribution,type,attributes,desctemplate):
         '''
@@ -46,6 +61,7 @@ class Node:
     def __init__(self,center,sigma):
         self._center = center
         self._sigma = sigma
+        self.states = {}
         self.states['firerate'] = 0.
         self.states['activation'] = 0
         self.states['firecount'] = 0
@@ -54,6 +70,7 @@ class Node:
     def __init__(self,dimension):
         self._center = [0.5]*dimension
         self.sigma = 1.0
+        self.states = {}
         self.states['firerate'] = 0.
         self.states['activation'] = 0
         self.states['firecount'] = 0
@@ -193,6 +210,20 @@ def fitness(ind,session):
     env.render(mode="human")
     env.reset()
 
+def growup(ind,session):
+    '''
+    成长/发育过程
+    :param ind:      发育个体
+    :param session:  发育环境
+    :return:
+    '''
+    pass
+    # 当时间上限没有到，或者平均前后发育差异大于阈值，则持续循环
+    ## 目标设定过程：
+    ### 如果没有外部目标，或者有外部目标但是仍可以设定内部目标，则启动内部目标设定过程
+    ### 内部目标设定：从目标库中随机选择m个感知目标，
+
+
 def run():
     # 初始神经网络的输入为28个姿态数据和8个动作数据（参见ant.py因为机器人应能够感知自身动作）
     ## 机器人位置坐标感受器
@@ -235,3 +266,4 @@ def run():
     r_knots_back_left_down = Sensor(BoxGene(34, [23,24], [], [], 'action', {'no': '212'}, ''))
     r_knots_back_right_up = Sensor(BoxGene(35, [25,26], [], [], 'action', {'no': '221'}, ''))
     r_knots_back_right_down = Sensor(BoxGene(36, [27,28], [], [], 'action', {'no': '222'}, ''))
+
