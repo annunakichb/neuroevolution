@@ -22,6 +22,7 @@ class SENetwork(NeuralNetwork):
                 (expressType is not None and b.gene.expression.startWith(expressType))]
 
 
+
     def findTBox(self,cause,effect):
         return [b for b in self.boxes if
                 (b.getExpressionOperation() == 'T') and
