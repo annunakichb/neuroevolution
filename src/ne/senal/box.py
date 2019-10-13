@@ -45,7 +45,7 @@ attention_S = BoxAttentionOperation('S','速度','$X的速度')
 attention_D = BoxAttentionOperation('D','方向','$X的方向')
 attention_PD = BoxAttentionOperation('D','属性方向','$X的$P方向')
 attention_T = BoxAttentionOperation('T','时序','$X1是$X2的原因')
-attention_ = BoxAttentionOperation('A','关联','$X1与$X2存在关联')
+attention_A = BoxAttentionOperation('A','关联','$X1与$X2存在关联')
 
 class Box:
     def __init__(self,gene):
@@ -67,8 +67,7 @@ class Box:
         取得表达式的参数部分
         :return:  list of str
         '''
-        p = re.compile(r'[(](.*?)[)]', re.S)
-        return re.findall(p, self.gene.expression).split(',')
+        return self.gene.express[2:-1]
 
     def isInExpressionParam(self,var_name,parts='',includelist=True):
         '''
