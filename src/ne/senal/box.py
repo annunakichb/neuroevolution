@@ -27,6 +27,12 @@ class BoxGene:
         self.group = group
         self.attributes = attributes
 
+class BoxAttentionGene:
+    def __init__(self,watcher,watched,operation):
+        self.watcher = watcher
+        self.watched = watched
+        self.operation = operation
+
 class Node:
     def __init__(self,u,sigma):
         self.u = u
@@ -48,12 +54,19 @@ attention_T = BoxAttentionOperation('T','时序','$X1是$X2的原因')
 attention_A = BoxAttentionOperation('A','关联','$X1与$X2存在关联')
 
 class Box:
-    def __init__(self,gene):
+    def __init__(self,gene,clip):
+        '''
+        神经元盒子
+        :param gene:  BoxGene 基因
+        :param clip:  list 范围
+        '''
         self.gene = gene
         self.nodes = []
         self.depth = 0
         for d in enumerate(gene.initdistribution):
             self.nodes.append(Node(d[0],d[1]))
+        self.attributes = {'clip':clip}
+        self.features = {'expect':0.,'reliability':0.}
 
     def getExpressionOperation(self):
         '''
@@ -91,9 +104,20 @@ class Box:
                 return self.isInExpressionParam(var,parts,includelist)
             return collections.all(var_name,f)
 
+    @property
+    def expect(self):
+        return self.features['expect']
 
+    @expect.setter
+    def setExpect(self,value):
+        self.features['expection'] = value
 
+    @property
+    def reliability(self):
+        return self.features['reliability']
 
-
+    @reliability.setter
+    def setReliability(self, value):
+        self.reliability = value
 
 

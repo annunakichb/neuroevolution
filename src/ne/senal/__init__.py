@@ -1,33 +1,27 @@
 import ne
+import  evolution
 import evolution.session as session
 import evolution.agent as agent
-
-from ne.senal import EhnalNeuralNetworkGenomeFactory
-
-
-
-__all__ = ['EhnalNeuralNetworkGenomeFactory','idgenerator','mutate','selection','ehnal_init']
+from evolution.agent import IndividualType
+from ne.senal.network import SENetwork
+from ne.senal.factory import SENALGenomeFactory
+from ne.senal.network import SENetworkGenome
+from ne.senal.network import SENetworkDecoder
+__all__ = ['senal_init']
 
 ###############################################################################################
 #############################基于关注逻辑的特征神经元网络############################################
 ####################Feature neuron network based on attention logic############################
 ###############################################################################################
 
-
-def ehnal_init():
+indTypeName = 'senal_network'
+def senal_init():
     # 神经元进化模块初始化
     ne.neuroevolution_init()
 
+    # 注册个体类型
+    indType = IndividualType('senal_network', SENetworkGenome, SENALGenomeFactory(), SENetwork,SENetworkDecoder())
+    neuralNetworkIndType = agent.individualTypes.register(indType, indTypeName)
+    evolution.set_default_popparam(name='indTypeName',defaultvalue=indTypeName)
 
 
-    # 注册物种划分对象
-    agent.speciesType.register(NeatSpeciesMethod(), 'neat_species')
-    # 注册选择操作对象
-    session.operationRegistry.register(NeatSelection(), 'neat_selection')
-    # 注册交叉操作对象
-    session.operationRegistry.register(NeatCrossmateOperation(), 'neat_crossmate')
-    # 注册变异操作对象
-    session.operationRegistry.register(NeatMutate(), 'neat_mutate')
-
-    # 注册操作顺序图
-    session.operationGraphis.register('neat_selection,neat_crossmate,neat_mutate', 'neat')

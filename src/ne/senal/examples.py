@@ -11,20 +11,31 @@ from ne.senal.box import BoxGene
 import brain
 import evolution
 from evolution.session import Session
+from evolution.session import EvolutionTask
+import ne.senal as senal
 
-netdef = brain.createNetDef()
+senal.senal_init()
+
+netdef = brain.createNetDef(neuronCounts=[3,1])
 netdef.inputboxs = [
-    {'expression':'f','initsize':1,'group':'body.hand.output.f','range':[0.,1.],'attributes':{}},  # 对力量输出的感知
-    {'expression':'s','initsize':1,'group':'env.s','attributes':{}},   # 对箱子位置的感知
-    {'expression':'o','initsize':1,'group':'env.o','attributes':{}}    # 对目标位置的感知
+    {'expression':'f','initsize':1,'group':'agent.hand.output.f','attributes':{'clip':[0.0,1.0],'caption':'推力'}},  # 对力量输出的感知
+    {'expression':'s','initsize':1,'group':'env.s','attributes':{'caption':'箱子位置'}},   # 对箱子位置的感知
+    {'expression':'o','initsize':1,'group':'env.o','attributes':{'caption':'目标位置'}}    # 对目标位置的感知
     ]
 netdef.outputboxs = [{'expression':'f_','initsize':1,'group':'hand.f_','attributes':{}}]
 
-popParam = evolution.createPopParam(size=100)
-runParam = evolution.createRunParam()
+popParam = evolution.createPopParam(size=100,genomeDefinition=netdef)
+runParam = evolution.createRunParam(
+    activity={
+        'stability_threshold':0.8,'stability_resdual':0.2,
+        'stability_action_count':3
+    }
+)
 
-session = Session()
-monitor = session.run()
+evo = EvolutionTask(1,popParam,None)
+evo.execute(runParam)
+
+
 
 
 

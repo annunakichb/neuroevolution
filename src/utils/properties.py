@@ -146,30 +146,40 @@ class Range:
 
 class PropertyInfo:
 
-    def __init__(self,xh,name,type,default,storeformats={},range = None,getter=None,setter=None,**props):
+    def __init__(self,xh,name,type,default=None,desc='',alias='',required='optional',range = None,getter=None,setter=None,**props):
         '''
         属性信息，描述一个对象的属性字段
         :param xh:                int 序号
         :param name:              str或者NameInfo 名称
         :param type:              type           类型
         :param default:           any            缺省值
-        :param storeformats:      dict           存储格式
+        :param desc               str            描述
+        :param alias              str             名称（存储名称）
+        :param required           str            是否必须（‘optional’,'necessary'）
         :param range:             str or Range   取值范围
         :param getter:            func           getter
         :param setter:            func           setter
         :param props:             dict           扩展属性
+                                        'format.formatname'  str
         '''
         self.xh = xh
         self.nameInfo = name if name is NameInfo else NameInfo(str(name))
         self.type = type
         self.default = default
+        self.desc = desc
         self.range = range
         self.getter = getter
         self.setter = setter
-        self.storeformats = storeformats
         self.props = props if props is not None else {}
-    def clone(self):
-        return PropertyInfo(self.xh,self.nameInfo,self.type,self.default,self.storeformats,self.range,self.getter,self.setter,**self.props)
+        self.alias = alias
+        self.required = required
+
+    def __str__(self):
+        return (self.alias if self.alias is not None and self.alias != '' else self.nameInfo.name) + \
+               (' type='+self.type if self.type is not None and self.type != object else '') + \
+               (' required=' + str(self.required)) + ('' if self.required else str(self.default))
+
+
 
 class Variable(PropertyInfo):
 

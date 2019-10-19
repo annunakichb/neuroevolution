@@ -187,7 +187,7 @@ class Session:
 
 # 进化任务
 class EvolutionTask:
-    def __init__(self,count,popParam,callback):
+    def __init__(self,count,popParam,callback=None):
         '''
         进化任务，一个进化任务是将多次执行进化，每次进化为一个session
         :param count:     int 运行次数

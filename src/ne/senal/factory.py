@@ -11,6 +11,7 @@ from ne import  DefaultNeuralNetworkGenomeFactory
 from ne.senal.box import BoxGene
 from ne.senal.box import Box
 from ne.senal.network import SENetwork
+from ne.senal.network import SENetworkGenome
 
 class SENALGenomeFactory(DefaultNeuralNetworkGenomeFactory):
     def create(self,popParam):
@@ -27,24 +28,25 @@ class SENALGenomeFactory(DefaultNeuralNetworkGenomeFactory):
 
         genomes = []
         for i in range(size):
-            netid = idGenerator.getNetworkId()
-            net = SENetwork(netid,netdef)
+            genome = SENetworkGenome()
 
             for index,inputbox in enumerate(netdef.inputboxs):
                 id = idGenerator.getModuleId()
                 boxGene = BoxGene(id,inputbox.expression,inputbox.initsize,[],'sensor',inputbox.group,inputbox.attributes)
-                net.putBox(Box(boxGene))
+                genome.box_genes.append(boxGene)
 
             for index,outputbox in enumerate(netdef.outputboxs):
                 id = idGenerator.getModuleId()
                 boxGene = BoxGene(id, inputbox.expression, inputbox.initsize, [], 'effector', inputbox.group,
                                   inputbox.attributes)
-                net.putBox(Box(boxGene))
+                genome.box_genes.append(boxGene)
 
+            # 生成一个中间盒子
+            ## 随机选择一个输入盒子
+            np.random.choice(a=netdef.inputboxs,size=1)
+            id = idGenerator.getModuleId()
 
-            genomes.append(net)
-
-
+            hiddleBoxGene = BoxGene(id)
             logging.debug('# SENAL工厂创建网络:'+str(net))
 
         return genomes

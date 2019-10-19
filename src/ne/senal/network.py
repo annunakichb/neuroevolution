@@ -2,6 +2,15 @@
 from brain.networks import NeuralNetwork
 from ne.senal.box import Box
 
+class SENetworkGenome:
+    def __init__(self):
+        self.box_genes = []
+        self.attention_genes = []
+
+class SENetworkDecoder:
+    def __init__(self):
+        pass
+
 class SENetwork(NeuralNetwork):
     def __init__(self):
         self.boxes = []
@@ -27,12 +36,12 @@ class SENetwork(NeuralNetwork):
         return [b for b in self.boxes if
                 (b.getExpressionOperation() == 'T') and
                 (cause is not None and b.isInExpressionParam(cause,parts='cause')) and
-                (effect if not None and b.isInExpressionParam(effect,parts='effect'))]
+                (effect is not None and b.isInExpressionParam(effect,parts='effect'))]
 
     def findABox(self,params):
         return [b for b in self.boxes if
-                (b.getExpressionOperation() == 'T') and
-                (params if not None and b.isInExpressionParam(params))]
+                (b.getExpressionOperation() == 'A') and
+                (params is not None and b.isInExpressionParam(params))]
 
     def findEnvSensorBox(self):
         '''
