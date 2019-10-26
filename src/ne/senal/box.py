@@ -1,7 +1,17 @@
 import re
 import utils.collections as collections
+from brain.elements import Neuron
+
+#region Gene
 class BoxGene:
-    def __init__(self,id,expression,initnodesize,initdistribution,type,group,attributes):
+    '''
+    盒子基因
+    '''
+    type_sensor = 'sensor'         # 感知器类型
+    type_receptor = 'receptor'     # 效应器类型
+    type_attention = 'attention'   # 关注类型
+    type_action = 'action'         # 动作类型
+    def __init__(self,id,expression,initnodesize,initdistribution,type,group,attributes,dimension=1):
         '''
         神经元盒子基因,在这种网络中，基因不是编码神经元而是神经元盒子
         :param id:               int  神经元盒子编号
@@ -18,6 +28,7 @@ class BoxGene:
                                         这个盒子里的感光细胞将对图像中某个固定位置的像素的值做出响应，图像的位置坐标就称为该神经元盒子的空间属性
                                         如果盒子对某个时序序列的固定时间点做出响应，则该盒子的属性为该时间点
                                         字典的key为属性名，其中's'和't'固定代表空间属性和时间属性
+        :param dimension         int   特征维数
         '''
         self.id = id
         self.expression = expression
@@ -26,18 +37,60 @@ class BoxGene:
         self.type = type
         self.group = group
         self.attributes = attributes
+        self.dimension = dimension
 
 class BoxAttentionGene:
-    def __init__(self,watcher,watched,operation):
-        self.watcher = watcher
-        self.watched = watched
+    def __init__(self,watcherid,watchedids,operation):
+        '''
+        关注基因
+        :param watcher:    int 关注者id
+        :param watched:    list of int  被关注者id
+        :param operation:  str          操作名
+        '''
+        self.watcherid = watcherid
+        self.watchedids = watchedids
         self.operation = operation
+    @property
+    def id(self):
+        return self.watcherid+"_"+ ".".join(self.watchedids)
 
-class Node:
-    def __init__(self,u,sigma):
-        self.u = u
-        self.sigma = sigma
-        self.activation = 0.
+class BoxActionConnectionGene:
+    def __init__(self,action_box_id,attention_box_ids,receptor_box_id):
+        '''
+        输出连接基因，为权重连接网络
+        :param action_box_id:
+        :param activation_box_ids:
+        '''
+        self.action_box_id  = action_box_id
+        self.attention_box_ids = attention_box_ids
+        self.receptor_box_id = receptor_box_id
+    @property
+    def id(self):
+        return self.action_box_id + "_" + ".".join(self.attention_box_ids)
+
+#endregion
+
+#region element
+class FeatureNeuron(Neuron):
+    def __init__(self,id,layer,boxid,featureValue,sigma,birth,modelConfiguration,coord=None):
+        '''
+        特征神经元，每个神经元表达一个特征值
+        :param id:                  int  id
+        :param layer:               int  所属层
+        :param boxid:               int  所属盒子id
+        :param featureValue:        list 特征值
+        :param sigma:               list of list 方差
+        :param birth:               int  出生年代
+        :param modelConfiguration:  dict 模型配置
+        :param coord:               list 坐标
+        '''
+        Neuron.__init__(self,id,layer,birth,modelConfiguration,coord)
+        self.state['activation'] = False
+        self.state['liveness'] = 0.
+        self.state['features'] = featureValue
+        self.state['sigma'] = sigma
+        self.state['time'] = 0
+        self.boxid = boxid
 
 
 class BoxAttentionOperation:
@@ -52,21 +105,44 @@ attention_D = BoxAttentionOperation('D','方向','$X的方向')
 attention_PD = BoxAttentionOperation('D','属性方向','$X的$P方向')
 attention_T = BoxAttentionOperation('T','时序','$X1是$X2的原因')
 attention_A = BoxAttentionOperation('A','关联','$X1与$X2存在关联')
+attention_operations = [attention_U,attention_V,attention_S,attention_D,attention_PD,attention_T,attention_A]
 
 class Box:
-    def __init__(self,gene,clip):
+    def __init__(self,gene):
         '''
         神经元盒子
         :param gene:  BoxGene 基因
-        :param clip:  list 范围
         '''
         self.gene = gene
         self.nodes = []
         self.depth = 0
-        for d in enumerate(gene.initdistribution):
-            self.nodes.append(Node(d[0],d[1]))
-        self.attributes = {'clip':clip}
         self.features = {'expect':0.,'reliability':0.}
+        self.inputs = []
+        self.outputs = []
+
+    def put_input_boxes(self,inputs):
+        self.inputs = []
+        if inputs is None:return self.inputs
+        elif isinstance(inputs,Box):self.inputs.append(inputs)
+        elif isinstance(inputs,list):self.inputs.extend(inputs)
+        return self.inputs
+    def add_input_boxes(self,inputs):
+        if inputs is None:return self.inputs
+        elif isinstance(inputs,Box):self.inputs.append(inputs)
+        elif isinstance(inputs,list):self.inputs.extend(inputs)
+        return self.inputs
+    def put_output_boxes(self,outputs):
+        self.outputs = []
+        if outputs is None:return self.outputs
+        elif isinstance(outputs,Box):self.outputs.append(outputs)
+        elif isinstance(outputs,list):self.outputs.extend(outputs)
+        return self.outputs
+    def add_output_boxes(self,outputs):
+        if outputs is None:return self.outputs
+        elif isinstance(outputs,Box):self.inputs.append(outputs)
+        elif isinstance(outputs,list):self.inputs.extend(outputs)
+        return self.outputs
+
 
     def getExpressionOperation(self):
         '''
@@ -121,3 +197,4 @@ class Box:
         self.reliability = value
 
 
+#endregion
