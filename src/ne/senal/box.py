@@ -1,6 +1,9 @@
 import re
+import numpy as np
 import utils.collections as collections
+from utils.properties import PropertyInfo
 from brain.elements import Neuron
+import math
 
 #region Gene
 class BoxGene:
@@ -8,36 +11,24 @@ class BoxGene:
     盒子基因
     '''
     type_sensor = 'sensor'         # 感知器类型
-    type_receptor = 'receptor'     # 效应器类型
+    type_receptor = 'effector'     # 效应器类型
     type_attention = 'attention'   # 关注类型
     type_action = 'action'         # 动作类型
-    def __init__(self,id,expression,initnodesize,initdistribution,type,group,attributes,dimension=1):
-        '''
-        神经元盒子基因,在这种网络中，基因不是编码神经元而是神经元盒子
-        :param id:               int  神经元盒子编号
-        :param expression:       str 关注表达式
-        :param initnodesize:     int 初始节点数
-        :param initdistribution: list of tuple 盒子中神经元的特征分布，
-                                               例如[(0.1,1.5),(2.,1.),(10.3)],
-                                               像RBF一样，每个神经元包含一个特征的的高斯分布，tuple中为高斯分布的均值和协方差矩阵
-                                               基因中记录的初始分布与实际神经元细胞中的分布不同的是，只有神经元的稳定度（见后面神经元节点中的定义）
-                                               大于0.6时，才会记录在基因中来。因此，初始分布中高斯分布的数量是少于神经元盒子发育之后的高斯分布数量的
-        :param type              str   类型用于区分不同神经元盒子的值类型，'sensor'，'receptor',‘hidden’
-        :param group             str   所属分组
-        :param attributes:       dict  属性记录神经元盒子的基本特征，它的值是不可变的，例如一个神经元盒子如果包含接收图像的一组感光细胞，则
-                                        这个盒子里的感光细胞将对图像中某个固定位置的像素的值做出响应，图像的位置坐标就称为该神经元盒子的空间属性
-                                        如果盒子对某个时序序列的固定时间点做出响应，则该盒子的属性为该时间点
-                                        字典的key为属性名，其中's'和't'固定代表空间属性和时间属性
-        :param dimension         int   特征维数
-        '''
+
+    def __init__(self, id,type,**kwargs):
         self.id = id
-        self.expression = expression
-        self.initnodesize = initnodesize
-        self.initdistribution = initdistribution
+        self.expression = kwargs['expression']
+        self.initsize = kwargs['initsize']
+        self.initdistribution = [] if 'initdistribution' not in kwargs else kwargs['initdistribution']
         self.type = type
-        self.group = group
-        self.attributes = attributes
-        self.dimension = dimension
+        self.group = kwargs['group']
+        self.clip = kwargs['clip']
+        self.caption = kwargs['caption']
+        self.attributes = {} if 'attributes' not in kwargs else kwargs['attributes']
+        self.dimension = 1 if 'dimension' not in kwargs else kwargs['dimension']
+
+    def __str__(self):
+        return self.caption
 
 class BoxAttentionGene:
     def __init__(self,watcherid,watchedids,operation):
@@ -54,6 +45,7 @@ class BoxAttentionGene:
     def id(self):
         return self.watcherid+"_"+ ".".join(self.watchedids)
 
+
 class BoxActionConnectionGene:
     def __init__(self,action_box_id,attention_box_ids,receptor_box_id):
         '''
@@ -67,6 +59,8 @@ class BoxActionConnectionGene:
     @property
     def id(self):
         return self.action_box_id + "_" + ".".join(self.attention_box_ids)
+
+
 
 #endregion
 
@@ -113,12 +107,16 @@ class Box:
         神经元盒子
         :param gene:  BoxGene 基因
         '''
+        self.id = gene.id
         self.gene = gene
         self.nodes = []
         self.depth = 0
-        self.features = {'expect':0.,'reliability':0.}
+        self.features = {'expection':0.,'reliability':0.,'stability':0.}
         self.inputs = []
         self.outputs = []
+
+    def __str__(self):
+        return self.gene.expression
 
     def put_input_boxes(self,inputs):
         self.inputs = []
@@ -181,11 +179,11 @@ class Box:
             return collections.all(var_name,f)
 
     @property
-    def expect(self):
-        return self.features['expect']
+    def expection(self):
+        return self.features['expection']
 
-    @expect.setter
-    def setExpect(self,value):
+    @expection.setter
+    def expection(self,value):
         self.features['expection'] = value
 
     @property
@@ -195,6 +193,32 @@ class Box:
     @reliability.setter
     def setReliability(self, value):
         self.reliability = value
+
+    def random(self):
+        return  np.random.rand()*self.gene.clip[0]+(self.gene.clip[1]-self.gene.clip[0])
+
+
+    def norm_pdf_multivariate(x, mu, sigma):
+        size = len(x)
+        det = np.linalg.det(sigma)
+        if det == 0:
+            raise NameError("The covariance matrix can't be singular")
+        norm_const = 1.0 / (math.pow((2 * math.pi), float(size) / 2) * math.pow(det, 1.0 / 2))
+        #x_mu = np.matrix(x - mu)
+        x_mu = np.array(x - mu)
+        inv = sigma.I
+        result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
+        return norm_const * result
+
+    def redistribution(self):
+        pass
+
+
+
+
+
+
+
 
 
 #endregion

@@ -80,7 +80,7 @@ class Session:
 
         # 显示参数信息
         # self.monitor.recordParam('基因参数',self.popParam.genomeDefinition,'task')
-        self.monitor.recordParam('种群参数',self.popParam,['task'])
+        self.monitor.recordParam('种群参数',self.popParam)
         self.monitor.recordParam('运行参数',self.runParam)
 
         # 创建种群

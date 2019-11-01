@@ -29,16 +29,15 @@ class SENALGenomeFactory(DefaultNeuralNetworkGenomeFactory):
 
         genomes = []
         for i in range(size):
-            genome = SENetworkGenome()
+            genome = SENetworkGenome(popParam.genomeDefinition)
             genome.id = idGenerator.getNetworkId()
 
             for index,inputbox in enumerate(netdef.inputboxs):
-                boxGene = BoxGene(index,inputbox['expression'],inputbox['initsize'],[],'sensor',inputbox['group'],inputbox['attributes'])
+                boxGene = BoxGene(index,'sensor',**inputbox)
                 genome.sensor_box_genes.append(boxGene)
-
+            oid = len(netdef.inputboxs)+1
             for index,outputbox in enumerate(netdef.outputboxs):
-                boxGene = BoxGene(index, outputbox['expression'], outputbox['initsize'], [], 'effector', outputbox['group'],
-                                  outputbox['attributes'])
+                boxGene = BoxGene(index+oid, 'effector',**outputbox)
                 genome.receptor_box_genes.append(boxGene)
 
                 # 对每一个输出盒子，随机选择一个输入盒子作为连接，优先选择同组输入

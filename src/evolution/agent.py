@@ -13,13 +13,13 @@ import  numpy as np
 
 __all__ = ['IndividualType','individualTypes','speciesType','Individual','Population','Specie']
 
-#region 个体信息
+#region Individual
 
-#个体类型
+
 class IndividualType:
     def __init__(self,name,genomeType,genomeFactory,phenomeType,genomeDecoder=None):
         '''
-        个体元信息
+        type of individual
         :param name:                       str 个体类型名
         :param genomeType:                 type 基因类型
         :param genomeFactory:              any  缺省基因工厂，它包含create函数
@@ -73,16 +73,22 @@ class Individual:
         phenome = self.getPhenome()
         if phenome is not None:phenome.reset()
 
-    def getPhenome(self):
+    def getPhenome(self,reset=False):
         '''取得表现型'''
+        if not reset and self._cachedPhenome is not None:
+            return self._cachedPhenome
+
         indMeta = individualTypes.find(self.indTypeName)
         if indMeta is None:raise RuntimeError('个体类型没有注册:'+self.indTypeName)
 
-        if indMeta.genomeDecoder is None:
+        if indMeta.genomeDecoder is not None:
+            self._cachedPhenome = indMeta.genomeDecoder.decode(self)
+            return self._cachedPhenome
+
+        if isinstance(self.genome,indMeta.phenomeType):
             return self.genome
 
-        self._cachedPhenome =  indMeta.genomeDecoder.decode(self)
-        return self._cachedPhenome
+        raise RuntimeError('个体类型没有注册有效的编码器:' + self.indTypeName)
 
     def getCachedPhenome(self):
         return self._cachedPhenome
@@ -170,7 +176,7 @@ class Population:
         # 遍历每一个评估项
         for key,evoluator in self.params.features.items():
             # 对每一个个体计算评估值
-            parallel = session.runParam.evalate.parallel
+            parallel = session.runParam.evaulate.parallel
             if parallel is not None and parallel>0:
                 pool = ThreadPoolExecutor(max_workers=parallel)
                 all_task = []
@@ -193,11 +199,12 @@ class Population:
             print('.........: population','.', key, '=', max,avg,min,stdev)
 
         # 按照适应度值排序
-        self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
+        if 'fitness' in self.params.features:
+            self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
 
-        # 记录精英个体id
-        eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else int(session.popParam.elitistSize * session.popParam.size)
-        self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
+            # 记录精英个体id
+            eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else int(session.popParam.elitistSize * session.popParam.size)
+            self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
 
 
     def __doIndEvaulate(self,ind,key,evoluator,session):

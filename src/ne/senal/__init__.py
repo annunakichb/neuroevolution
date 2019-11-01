@@ -2,9 +2,6 @@
 import  evolution
 import evolution.session as session
 import evolution.agent as agent
-import ne
-import ne.senal.activity as activity
-
 from evolution.session import Evaluator
 from evolution.agent import IndividualType
 from ne.senal.network import SENetwork
@@ -13,6 +10,8 @@ from ne.senal.network import SENetworkGenome
 from ne.senal.network import SENetworkDecoder
 from ne.senal.operations import SelectionOperation
 from ne.senal.operations import MutateOperation
+import ne.senal.activity
+import ne as ne
 
 #__all__ = ['senal_init']
 
@@ -39,5 +38,3 @@ def senal_init():
     # 注册缺省活动过程评估
     evaluator = Evaluator('fitness',[(ne.senal.activity.do_activity,1.0)])
     evolution.set_default_popparam('features',{'fitness':evaluator})
-
-

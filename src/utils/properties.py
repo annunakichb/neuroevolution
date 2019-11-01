@@ -146,13 +146,14 @@ class Range:
 
 class PropertyInfo:
 
-    def __init__(self,xh,name,type,default=None,desc='',alias='',required='optional',range = None,getter=None,setter=None,**props):
+    def __init__(self,xh,name,type,default=None,catalog="",desc='',alias='',required='optional',range = None,getter=None,setter=None,**props):
         '''
         属性信息，描述一个对象的属性字段
         :param xh:                int 序号
         :param name:              str或者NameInfo 名称
         :param type:              type           类型
         :param default:           any            缺省值
+        :param catalog            Union(str,list)分类目录
         :param desc               str            描述
         :param alias              str             名称（存储名称）
         :param required           str            是否必须（‘optional’,'necessary'）
@@ -166,6 +167,7 @@ class PropertyInfo:
         self.nameInfo = name if name is NameInfo else NameInfo(str(name))
         self.type = type
         self.default = default
+        self.catalog = catalog
         self.desc = desc
         self.range = range
         self.getter = getter
@@ -255,6 +257,39 @@ class Registry:
 class Properties(dict):
     def __init__(self, *args, **kwargs):
         super(Properties, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def create_from_dict(cls,param_meta_infos,**kwargs):
+        '''
+        从字段对象创建Properties
+        :param cls                type of Properties
+        :param param_meta_infos:  dict of PropertyInfo 字段参数元信息，key是PropertyInfo的name，value是PropertyInfo对象，规定kwargs应该有哪些参数
+        :param kwargs:            dict                  字典数据
+        :return:                  Properties            属性集对象
+        '''
+        results = {}
+        kw_key = ''
+        for key, param_info in param_meta_infos.items():
+            # 取得参数值,没有则选择缺省
+            value = param_info.default
+            if key not in kwargs and param_info.alias not in kwargs:
+                if param_info.required == 'necessary':
+                    raise RuntimeError(key + ' is necessary in population parameters')
+            else:
+                kw_key = key if key in kwargs else param_info.alias
+                value = kwargs[kw_key]
+            # 别名转换成list,并根据别名生成popParam的多级key
+            catalogs = param_info.catalog.split('.')
+            t = results
+            for a in catalogs[1:-1]:
+                if a not in t:
+                    t[a] = {}
+                t = t[a]
+            t[catalogs[-1] if len(catalogs)>0 else kw_key] = value
+            if kw_key != '' and kw_key in kwargs:kwargs.pop(kw_key)
+
+        results.update(kwargs)
+        return Properties(results)
 
     def __getattr__(self, name):
         value = self[name]

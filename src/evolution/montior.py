@@ -87,8 +87,8 @@ class Monitor:
         if self.callback is not None:self.callback('session.begin',self)
 
 
-    def recordParam(self,name,dict,ignoreKeys=[]):
-        encode_json = json.dumps(obj=dict,skipkeys=ignoreKeys,cls=ExtendJsonEncoder,indent=True)
+    def recordParam(self,name,dict):
+        encode_json = json.dumps(obj=dict,skipkeys=True,cls=ExtendJsonEncoder,indent=True)
         kwdata = {name:encode_json}
         self.__recordSection('记录参数',**kwdata)
         if self.callback is not None: self.callback('param.record', self)

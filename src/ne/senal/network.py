@@ -6,10 +6,11 @@ from ne.senal.box import Box
 from ne.senal.box import FeatureNeuron
 
 class SENetworkGenome:
-    def __init__(self):
+    def __init__(self,genomeDefinition):
         '''
         SENAL网络染色体
         '''
+        self.definition = genomeDefinition
         self.sensor_box_genes = []            # 感知盒子基因，参见BoxGene
         self.attention_box_genes = []         # 注意盒子基因，参见BoxGene
         self.action_box_genes = []            # 动作盒子基因，保留
@@ -86,20 +87,18 @@ class SENetworkDecoder:
         基因解码器
         '''
         pass
-    def decode(self,ind,session):
+    def decode(self,ind):
         '''
         解码方法
         :param ind:         Individual 个体
-        :param session:     Session    会话
         :return: SENetwork
         '''
-        netdef = session.popParam.genomeDefinition
-        idGenerator = networks.idGenerators.find(netdef.idGenerator)
 
         genome = ind.genome
         all_genes = genome.sensor_box_genes + genome.attention_box_genes + \
                     genome.action_box_genes + genome.receptor_box_genes
-        net = SENetwork(ind.id,session.popParam.genomeDefinition)
+        net = SENetwork(ind.id,genome.definition)
+        idGenerator = networks.idGenerators.find(genome.definition.idGenerator)
 
         for box_gene in all_genes:
             box = Box(box_gene)
@@ -108,14 +107,14 @@ class SENetworkDecoder:
                 neuron = FeatureNeuron(idGenerator.getNeuronId(), 0, box.id, dis[0], dis[1], 0, None)
                 box.nodes.append(neuron)
 
-        for attention_gene in self.attention_genes:
+        for attention_gene in genome.attention_genes:
             watcher_box = net.getBox(attention_gene.watcher_id)
             watched_boxes = net.getBox(attention_gene.watched_ids)
             watcher_box.put_input_boxes(watched_boxes)
             for x in watched_boxes:
                 x.put_output_boxes(watcher_box)
 
-        for action_connection_gene in self.action_connection_genes:
+        for action_connection_gene in genome.action_connection_genes:
             action_box = net.getBox(action_connection_gene.action_box_id)
             attention_boxes = net.getBox(action_connection_gene.attention_box_ids)
             receptor_box = net.getBox(action_connection_gene.receptor_box_id)
@@ -128,8 +127,11 @@ class SENetworkDecoder:
                 action_box.put_output_boxes(receptor_box)
             else:
                 receptor_box.put_input_boxes(attention_boxes)
-                for attention_box in attention_boxes:
-                    attention_box.put_output_boxes(receptor_box)
+                if isinstance(attention_boxes,list):
+                    for attention_box in attention_boxes:
+                        attention_box.put_output_boxes(receptor_box)
+                else:
+                    attention_boxes.put_output_boxes(receptor_box)
         return net
 
 
@@ -137,7 +139,7 @@ class SENetworkDecoder:
 
 class SENetwork(NeuralNetwork):
     def __init__(self,id,definition):
-        super(NeuralNetwork, self).__init__(id,definition)
+        super(SENetwork, self).__init__(id,definition)
         self.sensor_boxes = []  # 感知盒子，参见BoxGene
         self.attention_boxes = []  # 注意盒子，参见BoxGene
         self.action_boxes = []  # 动作盒子，保留
@@ -146,17 +148,24 @@ class SENetwork(NeuralNetwork):
         self.attentions = []  # 注意，参见BoxAttentionGene
         self.connections = []  # 动作连接，参见BoxActionGene
 
+    def allbox(self):
+        return self.sensor_boxes + self.attention_boxes + self.action_boxes + self.receptor_boxes
+
+
+
     def putBox(self,box):
-        if box.type == BoxGene.type_sensor:
+        if box.gene.type == BoxGene.type_sensor:
             self.sensor_boxes.append(box)
-        elif box.type == BoxGene.type_attention:
+        elif box.gene.type == BoxGene.type_attention:
             self.action_boxes.append(box)
-        elif box.type == BoxGene.type_action:
+        elif box.gene.type == BoxGene.type_action:
             self.attention_boxes.append(box)
-        elif box.type == BoxGene.type_receptor:
+        elif box.gene.type == BoxGene.type_receptor:
             self.receptor_boxes.append(box)
 
     def getBox(self,id):
+        if id is None:
+            return None
         all_boxes = self.sensor_boxes + self.attention_boxes + self.action_boxes + self.receptor_boxes
         ids = []
         if isinstance(id,int):
@@ -191,6 +200,8 @@ class SENetwork(NeuralNetwork):
         return [b for b in self.boxes if
                 (b.getExpressionOperation() == 'A') and
                 (params is not None and b.isInExpressionParam(params))]
+    def findOutputBox(self):
+        return self.receptor_boxes;
 
     def findEnvSensorBox(self):
         '''
@@ -198,3 +209,12 @@ class SENetwork(NeuralNetwork):
         :return:
         '''
         return self.findBox('sensor','env.')
+
+    def clear_expect(self):
+        allbox = self.allbox()
+        for box in allbox:
+            box.expection = 0.
+
+    def activate(self, inputs):
+        if inputs is None: return []
+

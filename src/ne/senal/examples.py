@@ -89,21 +89,21 @@ senal.senal_init()
 # 定义网络参数，主要是输入和输出
 netdef = brain.createNetDef(neuronCounts=[3,1])
 netdef.inputboxs = [
-    {'expression':'f','initsize':1,'group':'agent.hand.output','attributes':{'clip':[0.0,1.0],'caption':'推力'}},  # 对力量输出的感知
-    {'expression':'s','initsize':1,'group':'env.s','attributes':{'caption':'箱子位置'}},   # 对箱子位置的感知
-    {'expression':'o','initsize':1,'group':'env.o','attributes':{'caption':'目标位置'}}    # 对目标位置的感知
+    {'expression':'f','initsize':1,'group':'agent.hand.output','clip':[0.0,1.0],'caption':'推力','attributes':{}},  # 对力量输出的感知
+    {'expression':'s','initsize':1,'group':'env.s','clip':[0.0,10.0],'caption':'箱子位置','attributes':{}},   # 对箱子位置的感知
+    {'expression':'o','initsize':1,'group':'env.o','clip':[0.0,10.0],'caption':'目标位置','attributes':{}}    # 对目标位置的感知
 ]
-netdef.outputboxs = [{'expression':'f_','initsize':1,'group':'hand','attributes':{}}]
+netdef.outputboxs = [{'expression':'f_','initsize':1,'clip':[0.0,1.0],'group':'hand','caption':'推力','attributes':{}}]
 
 #endregion
 
 
 #region 种群参数和运行参数
 popParam = evolution.createPopParam(size=100,elitistSize=0.05,genomeDefinition=netdef)
-runParam = evolution.createRunParam(1000,1.0,'activity',
+runParam = evolution.createRunParam(1000,1.0,
     activity={
         'stability_threshold':0.8,'stability_resdual':0.2,
-        'stability_action_count':3
+        'stability_max_count':3,'stability_output_count':3
     },
     handlers = {
         'ind.begin':handle_ind_begin,

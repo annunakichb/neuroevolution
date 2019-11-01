@@ -1,5 +1,5 @@
 import numpy as np
-
+from itertools import permutations
 
 
 event_ind_begin = 'ind.begin'
@@ -12,11 +12,14 @@ def do_activity(ind,session):
     if event_ind_begin in handlers:
         handlers[event_ind_begin](ind,session)
 
+    # 生长
     _do_growth(ind,session)
+
+    # 任务
     return __do_task(ind,session)
 
 
-def _do_growth(self,ind,session):
+def _do_growth(ind,session):
     '''
     执行发育过程
     :param ind:     Individual 个体
@@ -26,29 +29,32 @@ def _do_growth(self,ind,session):
     net = ind.getPhenome()
     # 随机动作执行阶段
     n = 0
+    last_stability = [1.0 for box in net.allbox()]
     while n < session.runParam.activity.stability_max_count:
         # 计算各个盒子的稳定度
-        stability = self._get_stability(ind, session)
-        last_stability = stability
+        stability = [box.features['stability'] for box in net.allbox()]
+
         # 若盒子都比较稳定，则跳过随机动作阶段
         if min(stability) >= session.runParam.activity.stability_threshold:
             break
         # 若所有盒子的稳定度都不再变化，则跳出随机动作阶段
-        if np.average(stability - last_stability) <= session.runParam.activity.stability_resdual:
+        if np.average([np.abs(stability[i] - last_stability[i]) for i in range(len(stability))]) \
+                 <= session.runParam.activity.stability_resdual:
             break
+        last_stability = stability
         # 找到所有的可执行动作
-        actions = net.findActionBox()
+        outboxes = net.findOutputBox()
         # 选取count个可执行动作组合
-        for count in range(len(actions)):
-            action_composites = self._get_action_composites(actions, count)
+        for count in range(len(outboxes)):
+            out_composites = list(permutations(outboxes, count))
             # 对每个动作组合随机选择若干次输出
-            for i in range(session.runParam.activity.stability_action_count):
+            for i in range(session.runParam.activity.stability_output_count):
                 net.clear_expect()
-                for actions in action_composites:
-                    for action in actions:
-                        action.setExpect(action.random())
+                for outs in out_composites:
+                    for out in outs:
+                        out.expection = out.random()
                 # 向环境输出动作，得到新的观察
-                obs = session.runParam.handlers[event_ind_action](ind,session,[action.expect for action in actions])
+                obs = session.runParam.handlers[event_ind_action](ind,session,actions=[out.expection for out in outboxes])
                 # 网络观察新的环境
                 # net.observe(obs)
         n += 1
