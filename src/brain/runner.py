@@ -13,6 +13,9 @@ import sys
 import brain.models as models
 
 __all__ = ['EndCondition','NeuralNetworkTask','SimpleNeuralNetworkRunner','runners']
+
+cur_generation = 1
+
 # 训练终止条件类型
 class EndCondition(Enum):
     MAXEPOCH = 1,

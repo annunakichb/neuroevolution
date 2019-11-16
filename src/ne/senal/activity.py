@@ -26,8 +26,9 @@ def _do_growth(ind,session):
     :param session: Session    执行会话
     :return:
     '''
+    # 胚胎阶段，生成初始网络
     net = ind.getPhenome()
-    # 随机动作执行阶段
+    # 随机动作执行阶段（类似幼儿节点执行大量随机动作），该节点将对每个盒子稳定其中节点的分布
     n = 0
     last_stability = [1.0 for box in net.allbox()]
     while n < session.runParam.activity.stability_max_count:
@@ -49,7 +50,7 @@ def _do_growth(ind,session):
             out_composites = list(permutations(outboxes, count))
             # 对每个动作组合随机选择若干次输出
             for i in range(session.runParam.activity.stability_output_count):
-                net.clear_expect()
+                net.clear_expect()  # 这里的期望是指输出盒子的预期输出
                 for outs in out_composites:
                     for out in outs:
                         out.expection = out.random()

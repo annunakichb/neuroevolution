@@ -4,6 +4,7 @@ from brain.networks import NeuralNetwork
 from ne.senal.box import BoxGene
 from ne.senal.box import Box
 from ne.senal.box import FeatureNeuron
+import utils.collections as collecitons
 
 class SENetworkGenome:
     def __init__(self,genomeDefinition):
@@ -101,7 +102,7 @@ class SENetworkDecoder:
         idGenerator = networks.idGenerators.find(genome.definition.idGenerator)
 
         for box_gene in all_genes:
-            box = Box(box_gene)
+            box = Box(box_gene,net)
             net.putBox(box)
             for dis in box_gene.initdistribution:
                 neuron = FeatureNeuron(idGenerator.getNeuronId(), 0, box.id, dis[0], dis[1], 0, None)
@@ -151,7 +152,17 @@ class SENetwork(NeuralNetwork):
     def allbox(self):
         return self.sensor_boxes + self.attention_boxes + self.action_boxes + self.receptor_boxes
 
+    def get_sensor_box(self):
+        return self.sensor_boxes
+    def get_attention_box(self):
+        return self.attention_boxes
+    def get_cognition_box(self):
+        return self.sensor_boxes + self.attention_boxes
 
+    def get_action_box(self):
+        return self.action_boxes
+    def get_receptor_box(self):
+        return self.receptor_boxes
 
     def putBox(self,box):
         if box.gene.type == BoxGene.type_sensor:
@@ -173,21 +184,26 @@ class SENetwork(NeuralNetwork):
         else: ids = id
 
         r = [box for box in all_boxes if box.id in ids]
-
         return r[0] if len(r)==1 else r
 
-    def findBox(self,type=None,group=None,expressType=None):
+    def findBox(self,type=None,group=None,expressType=None,depth=-1,expression=''):
         '''
         查找特定类型和分组条件的盒子
         :param type:
         :param group:
         :return:
         '''
-        return [b for b in self.boxes if
-                (group is not None and b.gene.group.startWith(group)) and
-                (type is not None and b.gene.type == type) and
-                (expressType is not None and b.gene.expression.startWith(expressType))]
+        boxes = self.allbox()
+        r = []
+        for b in boxes:
+            if group is not None and not b.gene.group.startWith(group):continue
+            if type is not None and b.gene.type != type:continue
+            if expressType is not None and not b.gene.expression.startWith(expressType):continue
+            if depth>=0 and b.depth != depth:continue
+            if expression is not None and expression != b.gene.expression:continue
+            r.append(b)
 
+        return r if len(r)>1 or len(r)<=0 else r[0]
 
 
     def findTBox(self,cause,effect):
@@ -210,11 +226,53 @@ class SENetwork(NeuralNetwork):
         '''
         return self.findBox('sensor','env.')
 
+    def get_attented_box(self,boxes):
+        '''
+        取得以boxes为输入的所有box
+        :param boxes: list 输入box
+        :return:  list
+        '''
+        boxes.sort(key = 'id')
+        all_box = self.allbox()
+        r = []
+        for box in all_box:
+            inputs = box.inputs
+            inputs.sort(key='id')
+            if inputs == boxes:r.append(box)
+        return r
+
+
     def clear_expect(self):
         allbox = self.allbox()
         for box in allbox:
             box.expection = 0.
 
-    def activate(self, inputs):
-        if inputs is None: return []
+    def attention_needed(self,box):
+        input_boxes = box.put_input_boxes()
+        return collecitons.all(input_boxes,lambda b:'clock' in b.states and b.states['clock'] == self.clock)
 
+    def activate(self, inputs):
+        '''
+        网络的一次激活活动
+        :param inputs: list of (box,value) 多个元组组成的list，box是指Box本身或者id，value是给box的输入值向量
+                       list中可以只有部分感知box
+        :return:
+        '''
+        if inputs is None: return []
+        for box,values in inputs:
+            box.activate(values)
+
+        allbox = self.allbox()
+        count = len(allbox)
+        while count>0:
+            for box in allbox:
+                if ('clock' in box.states and box.states['clock'] == self.clock): # 该盒子没有在当前时钟活动
+                    count -= 1
+                elif box.gene.type == 'sensor':      # 该盒子是感知型
+                    continue
+                elif not self.attention_needed(box): # 该盒子的上游盒子没有全部被激活
+                    count -= 1
+                else:
+                    box.do_attention()
+                    count -= 1
+            count = len(allbox)

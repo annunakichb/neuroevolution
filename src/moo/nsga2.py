@@ -59,7 +59,7 @@ class NSGA2(SelectionBase):
         for cross in corssmeateInds:
             if strs.isVaild(sdebug): sdebug += ','
             sdebug += str(cross[0]) + '-' + str(cross[1])
-        session.monitor.recordDebug('neat_selection', '交叉的个体', sdebug)
+        session.monitor.recordDebug(NSGA2.name, '交叉的个体', sdebug)
 
         # region 第四步：对所有个体按照适应度从高到低排序，随机选择其中一部分作为变异个体
         metateinds = []
@@ -91,7 +91,7 @@ class NSGA2(SelectionBase):
         np.random.seed(0)
         # p = np.array(mutateSelProb)
         mutateinds = np.random.choice(candidateInds, size=mutateCount, p=p.ravel())
-        session.monitor.recordDebug('neat_selection', '变异的个体',
+        session.monitor.recordDebug(NSGA2.name, '变异的个体',
                                     reduce(lambda i, j: i + ',' + j, map(lambda ind: str(ind.id), mutateinds)))
 
         return True, '选择操作完成,其中淘汰个体数量=' + str(len(removeIndids)) + ',交叉个体数量=' + str(

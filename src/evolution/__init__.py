@@ -72,7 +72,7 @@ run_params_info = {
         'debug':PropertyInfo(5, 'debug',bool,catalog='runparam.log.debug',required='optional',default=False, desc='是否记录调试信息'),
         'logfile':PropertyInfo(6, 'logfile', str, catalog='runparam.log.file', required='optional',default='evolution.log', desc='是否记录个体信息到日志(这会使日志很大)'),
         'parallel':PropertyInfo(7, 'parallel', bool, catalog='runparam.evaulate.parallel', required='optional', default=False,desc='启动并行评估'),
-        'mutate_propotion':PropertyInfo(8, 'mutate_propotion', float, catalog='runparam.operation.mutate.propotion', required='optional', default=0.01,desc='变异比例'),
+        'mutate_propotion':PropertyInfo(8, 'mutate_propotion', float, catalog='runparam.mutate.propotion', required='optional', default=0.01,desc='变异比例'),
         'mutate_parallel':PropertyInfo(9, 'mutate_parallel',bool, catalog='runparam.mutate.parallel', required='optional',default=False, desc='启动并行变异过程'),
         'mutate_model_rate':PropertyInfo(10, 'mutate_model_rate', float, catalog='runparam.mutate.model.rate', required='optional',default=0.0, desc='计算模型也参与变异的概率'),
         'mutate_model_range':PropertyInfo(11, 'mutate_model_range',str , catalog='runparam.mutate.model.range', required='optional',default='', desc='可选的计算模型名称，多个用逗号分开，缺省是netdef中所有模型'),

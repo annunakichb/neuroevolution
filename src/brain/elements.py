@@ -24,9 +24,10 @@ class NeuralElement:
         self.birth = birth
         self.modelConfiguration = modelConfiguration
         self.coord = coord
-        self.states = {}
-        self.params = {}
-        self.variables = []
+        self.states = {}        # 特指活动状态，例如神经元的激活强度
+        self.params = {}        # 计算过程涉及到的参数
+        self.variables = []     # 变量
+        self.features = {}      # 统计特征
 
         self._initModel()
 
