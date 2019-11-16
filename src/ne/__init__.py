@@ -8,8 +8,7 @@ from brain.networks import NeuralNetwork
 
 from ne.factory import DefaultNeuralNetworkGenomeFactory
 
-__all__ = ['factory','callbacks','neat','module1']
-
+__all__ = ['factory','callbacks','neat','senal']
 
 def neuroevolution_init():
     '''

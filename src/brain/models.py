@@ -102,7 +102,7 @@ class CommonHiddenNeuronModel:
             elif name in activationFunctionConfig:activationParams[name] = activationFunctionConfig[name]
 
         # 用输入和计算激活函数
-        value,activation = neuron.activationFunction.calculate(sum,activationParams) #?这里有问题，激活函数的参数无法传入
+        value,activation = neuron.activationFunction.calculate(sum,activationParams)
 
         # 记录状态
         neuron.states['value'] = value
@@ -144,9 +144,46 @@ class CommonSynapseModel:
 
 #endregion
 
+#region 效应器计算模型
+class EffectorModel:
+    nameInfo = NameInfo('effector', cataory='common')
+    __initStates = {}
+    __variables = []
+
+    def __init__(self, **configuration):
+        self.nameInfo = CommonSynapseModel.nameInfo
+        self.configuration = configuration
+        self.initStates = EffectorModel.__initStates
+        self.variables = EffectorModel.__variables
+
+    def execute(self, effector, net, **context):
+        # 取得待计算突触的输入突触
+        synapses = net.getSynapses(toId=effector.id)
+        if synapses is None or len(synapses) <= 0: return
+
+        # 检查突触是否都有值
+        # if not collections.all(synapses,lambda s:'value' in s.states.keys()):
+        if not collections.all(synapses, lambda s: 'value' in s.states):
+            return None
+
+        # 取得突触所有输入值中最大的那个
+        inputs = list(map(lambda s: s.states['value'], synapses))
+        value = maxinput = max(inputs)
+
+        # 检查是否有抑制性突出（待实现）
+
+        # 记录状态
+        effector.states['value'] = value
+        effector.states['activation'] = value > 0
+
+        return value
+
+#endregion
+
 
 # 神经计算模型管理
 nervousModels = Registry()
 nervousModels.register(CommonInputNeurnModel())
 nervousModels.register(CommonHiddenNeuronModel())
 nervousModels.register(CommonSynapseModel())
+nervousModels.register(EffectorModel())

@@ -232,6 +232,10 @@ class ExtendJsonEncoder(json.JSONEncoder):
             return None
         if any(ExtendJsonEncoder.autostrTypes,lambda t:isinstance(obj,t)):
             return str(obj)
-        return json.JSONEncoder.default(self, obj)
+        try:
+            return json.JSONEncoder.default(self, obj)
+        except:
+            return ''
+
 
 #endregion

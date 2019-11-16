@@ -7,18 +7,19 @@ from evolution.env import EvaluationValue
 from utils.properties import Registry
 import utils.collections as collections
 import utils.strs as strs
+from evolution.env import EvaluationValues
 
 import  numpy as np
 
 __all__ = ['IndividualType','individualTypes','speciesType','Individual','Population','Specie']
 
-#region 个体信息
+#region Individual
 
-#个体类型
+
 class IndividualType:
     def __init__(self,name,genomeType,genomeFactory,phenomeType,genomeDecoder=None):
         '''
-        个体元信息
+        type of individual
         :param name:                       str 个体类型名
         :param genomeType:                 type 基因类型
         :param genomeFactory:              any  缺省基因工厂，它包含create函数
@@ -72,19 +73,30 @@ class Individual:
         phenome = self.getPhenome()
         if phenome is not None:phenome.reset()
 
-    def getPhenome(self):
+    def getPhenome(self,reset=False):
         '''取得表现型'''
+        if not reset and self._cachedPhenome is not None:
+            return self._cachedPhenome
+
         indMeta = individualTypes.find(self.indTypeName)
         if indMeta is None:raise RuntimeError('个体类型没有注册:'+self.indTypeName)
 
-        if indMeta.genomeDecoder is None:
+        if indMeta.genomeDecoder is not None:
+            self._cachedPhenome = indMeta.genomeDecoder.decode(self)
+            return self._cachedPhenome
+
+        if isinstance(self.genome,indMeta.phenomeType):
             return self.genome
 
-        self._cachedPhenome =  indMeta.genomeDecoder.decode(self)
-        return self._cachedPhenome
+        raise RuntimeError('个体类型没有注册有效的编码器:' + self.indTypeName)
 
     def getCachedPhenome(self):
         return self._cachedPhenome
+
+    @property
+    def fitness(self):
+        values = [f.value for f in self.features]
+        return EvaluationValues(values)
 
     def __getitem__(self, item):
         #if item in self.features.keys():
@@ -98,8 +110,8 @@ class Individual:
             self.features[key] = EvaluationValue()
         self.features[key].append(value)
 
-    def getFeature(self,name):
-        return self.features.get(name)
+    def getFeature(self,name,default=None):
+        return self.features.get(name,default)
 
     def __str__(self):
         return self._getFeatureStr() + ":" + str(self.genome) + ""
@@ -126,6 +138,7 @@ class Population:
         self.features = {}
         self.eliest = []
         self.species = []
+        EvaluationValues.weights = tuple([f[1] for f in params.features])
 
     @classmethod
     def create(cls,popParam):
@@ -163,7 +176,7 @@ class Population:
         # 遍历每一个评估项
         for key,evoluator in self.params.features.items():
             # 对每一个个体计算评估值
-            parallel = session.runParam.evalate.parallel
+            parallel = session.runParam.evaulate.parallel
             if parallel is not None and parallel>0:
                 pool = ThreadPoolExecutor(max_workers=parallel)
                 all_task = []
@@ -174,6 +187,7 @@ class Population:
                 for ind in self.inds:
                     value = evoluator.calacute(ind,session)
                     ind[key] = value
+                    print('.........: ind',str(ind.id),'.',key,'=',value)
 
             # 计算所有个体评估值的平均，最大和最小
             max,avg,min,stdev = collections.rangefeature(list(map(lambda i:i[key],self.inds)))
@@ -182,13 +196,15 @@ class Population:
             self[key]['average'] = avg
             self[key]['min'] = min
             self[key]['stdev'] = stdev
+            print('.........: population','.', key, '=', max,avg,min,stdev)
 
         # 按照适应度值排序
-        self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
+        if 'fitness' in self.params.features:
+            self.inds.sort(key=lambda ind:ind['fitness'],reverse=True)
 
-        # 记录精英个体id
-        eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else int(session.popParam.elitistSize * session.popParam.size)
-        self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
+            # 记录精英个体id
+            eliestCount = int(session.popParam.elitistSize) if session.popParam.elitistSize >= 1 else int(session.popParam.elitistSize * session.popParam.size)
+            self.eliest = self.inds[0:eliestCount] if eliestCount>0 else []
 
 
     def __doIndEvaulate(self,ind,key,evoluator,session):

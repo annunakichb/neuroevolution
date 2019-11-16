@@ -186,15 +186,17 @@ class NeatMutate:
 
     def __doWeightTrain_nes(self, ind, session):
         net = ind.getPhenome()
-        origin_fitness = ind['fitness']
+        origin_fitness = 0.0 if 'fitness' not in ind.features else ind['fitness']
         synapses = net.getSynapses()
         neurons = net.getHasVarNeurons('bias')
         old_weights = [s['weight'] for s in synapses]
         old_bias = [n['bias'] for n in neurons]
-        params = old_weights + old_bias
+        params = []
+        params.extend(old_weights)
+        params.extend(old_bias)
         evoluator = session.pop.params.features['fitness']
 
-        def f(params,ind):
+        def f(params, ind):
             '''
             计算适应度值
             :param params: 与适应度函数不同的是，这里的params是权重和偏置组成的list
@@ -209,12 +211,18 @@ class NeatMutate:
                 n['bias'] = new_bias[index]
             return evoluator.calacute(ind, session)
 
-        from nes.nature_es import NaturalEvolutionStrategies
-        es = NaturalEvolutionStrategies(f,params,ind)
-        params = es.run()
-        new_fitness = evoluator.calacute(ind, session)
+        from es.nes import NES
+        es = NES()
+        newparams,new_fitness = es.run(f,params,ind,False,False)
+        new_weights = newparams[:len(old_weights)]
+        new_bias = newparams[len(old_weights):]
+        for index, s in enumerate(synapses):
+            s['weight'] = new_weights[index]
+        for index, n in enumerate(neurons):
+            n['bias'] = new_bias[index]
 
-        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(origin_fitness)+",diff="+str(origin_fitness - origin_fitness))
+        session.monitor.recordDebug(NeatMutate.name,'ind'+str(ind.id)+'权重修正前后适应度变化','old='+str(origin_fitness)+",new="+str(new_fitness)+",diff="+str(new_fitness - origin_fitness))
+
 
 
     def __doWeightTrain_random(self,ind,session):

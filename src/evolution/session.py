@@ -80,7 +80,7 @@ class Session:
 
         # 显示参数信息
         # self.monitor.recordParam('基因参数',self.popParam.genomeDefinition,'task')
-        self.monitor.recordParam('种群参数',self.popParam,['task'])
+        self.monitor.recordParam('种群参数',self.popParam)
         self.monitor.recordParam('运行参数',self.runParam)
 
         # 创建种群
@@ -91,8 +91,10 @@ class Session:
             self.monitor.recordPopulationCreate(self.pop,e)
 
         # 计算种群特征
+        self.monitor.recordPopulationFeaturesEvaulate()
         self.pop.evaulate(self)
         self.monitor.recordPopulationFeatures()
+
         self.monitor.recordIndividuals()
         self.popRecords.append(self.__createPopRecord())
 
@@ -171,6 +173,7 @@ class Session:
         return self.runParam.operations.text.split(',')
 
     def __createPopRecord(self):
+        '''取得所有种群所有评估特征的最大，平均，最小和标准差'''
         r = {}
         #for featureKey in self.pop.params.features.keys():
         for featureKey in self.pop.params.features:
@@ -184,7 +187,7 @@ class Session:
 
 # 进化任务
 class EvolutionTask:
-    def __init__(self,count,popParam,callback):
+    def __init__(self,count,popParam,callback=None):
         '''
         进化任务，一个进化任务是将多次执行进化，每次进化为一个session
         :param count:     int 运行次数

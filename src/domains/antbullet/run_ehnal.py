@@ -6,26 +6,62 @@ import gym
 import numpy as np
 import utils.collections as collections
 
+class BoxType:
+
+    def __init__(self,a,name):
+        self.a = a
+        self.name = name
+
+box_E = BoxType('E',['均值',''])
+box_V = BoxType('V',['方差',''])
+box_T = BoxType('T',['时序',''])
+box_D = BoxType('D',['方向',''])
+box_S = BoxType('S',['速度',''])
+box_A = BoxType('A',['加速度',''])
+box_PD = BoxType('PD',['属性方向',''])
+box_type = [box_E,box_V,box_T,box_D,box_S,box_A]
+
 class BoxGene:
-    def __init__(self,inputboxs,outputboxs,initnodecount,attributes,desctemplate):
+    def __init__(self,id,inputboxs,outputboxs,initdistribution,type,attributes,desctemplate):
+        '''
+        神经元盒子基因
+        :param id:               int  神经元盒子编号
+        :param inputboxs:        list of int 输入盒子的编号集
+        :param outputboxs:       list of int 输出盒子的编号集
+        :param initdistribution: list of tuple 盒子中神经元的特征分布，
+                                               例如[(0.1,1.5),(2.,1.),(10.3)],
+                                               像RBF一样，每个神经元包含一个特征的的高斯分布，tuple中为高斯分布的均值和协方差矩阵
+                                               基因中记录的初始分布与实际神经元细胞中的分布不同的是，只有神经元的稳定度（见后面神经元节点中的定义）
+                                               大于0.6时，才会记录在基因中来。因此，初始分布中高斯分布的数量是少于神经元盒子发育之后的高斯分布数量的
+        :param type              str   类型用于区分不同神经元盒子的值类型，type不可变，例如感知自身力气的神经元盒子与感知自身坐标的盒子，类型不同
+                                       类型用于神经元进化的变异过程，同类型的盒子之间优先建立连接
+        :param attributes:       dict  属性记录神经元盒子的基本特征，它的值是不可变的，例如一个神经元盒子如果包含接收图像的一组感光细胞，则
+                                        这个盒子里的感光细胞将对图像中某个固定位置的像素的值做出响应，图像的位置坐标就称为该神经元盒子的空间属性
+                                        如果盒子对某个时序序列的固定时间点做出响应，则该盒子的属性为该时间点
+                                        字典的key为属性名，其中's'和't'固定代表空间属性和时间属性
+        :param desctemplate:     str 完全是为了打印输出。当需要打印输出盒子的属性或状态的时候，该字符串为输出模版，输出模版都是在网络进化任务完成以后，
+                                     人为的补充的
+        '''
+        self.id = id
         self.inputs = inputboxs
         self.outputs = outputboxs
-        self.initnodecount = initnodecount
+        self.initdistribution = initdistribution
         self.attributes = attributes
         self.desctemplate = desctemplate
+
 class Box:
-    def __init__(self,desc=''):
-        self.desc = desc
+    def __init__(self,gene):
+        self.gene = gene
         self.nodes = []
-        self.inputs = []
-        self.outputs = []
-        self.attributes = {}
-        self.samples = []
+class Sensor(Box):
+    pass
+
 class Node:
     firerate_activate = 0.55
     def __init__(self,center,sigma):
         self._center = center
         self._sigma = sigma
+        self.states = {}
         self.states['firerate'] = 0.
         self.states['activation'] = 0
         self.states['firecount'] = 0
@@ -34,6 +70,7 @@ class Node:
     def __init__(self,dimension):
         self._center = [0.5]*dimension
         self.sigma = 1.0
+        self.states = {}
         self.states['firerate'] = 0.
         self.states['activation'] = 0
         self.states['firecount'] = 0
@@ -173,5 +210,60 @@ def fitness(ind,session):
     env.render(mode="human")
     env.reset()
 
-def run():
+def growup(ind,session):
+    '''
+    成长/发育过程
+    :param ind:      发育个体
+    :param session:  发育环境
+    :return:
+    '''
     pass
+    # 当时间上限没有到，或者平均前后发育差异大于阈值，则持续循环
+    ## 目标设定过程：
+    ### 如果没有外部目标，或者有外部目标但是仍可以设定内部目标，则启动内部目标设定过程
+    ### 内部目标设定：从目标库中随机选择m个感知目标，
+
+
+def run():
+    # 初始神经网络的输入为28个姿态数据和8个动作数据（参见ant.py因为机器人应能够感知自身动作）
+    ## 机器人位置坐标感受器
+    sensor_pos = Sensor(BoxGene(10,[],[],[],'pos',{},''))
+    ## 机器人移动速度感受器
+    sensor_speed = Sensor(BoxGene(11,[],[],[],'speed',{},''))
+    #s3s = [Sensor(BoxGene(12,[],[],[],'pos',{'partno':i+1},'')) for i in range(11)] # 身体各部位位置感受器
+    ## 朝向感受器
+    sensor_direction = Sensor(BoxGene(12,[],[],[],'direction',{},''))
+    ## 关节感受器,其中no的三个数字最高位表示前后，中间位表示左右，最低位表示上下，上下距离最近，左右距离次近，前后距离最远
+    s4_konts_posture_front_left_up = Sensor(BoxGene(13,[],[],[],'posture',{'no':'111'},''))
+    s4_konts_posture_front_left_down = Sensor(BoxGene(15, [], [], [], 'posture', {'no': '112'}, ''))
+    s4_konts_posture_front_right_up = Sensor(BoxGene(17, [], [], [], 'posture', {'no': '121'}, ''))
+    s4_konts_posture_front_right_down = Sensor(BoxGene(19, [], [], [], 'posture', {'no': '122'}, ''))
+    s4_konts_posture_back_left_up = Sensor(BoxGene(21, [], [], [], 'posture', {'no': '211'}, ''))
+    s4_konts_posture_back_left_down = Sensor(BoxGene(23, [], [], [], 'posture', {'no': '212'}, ''))
+    s4_konts_posture_back_right_up = Sensor(BoxGene(25, [], [], [], 'posture', {'no': '221'}, ''))
+    s4_konts_posture_back_right_down = Sensor(BoxGene(27, [], [], [], 'posture', {'no': '222'}, ''))
+    # 关节动作感受器
+    s4_konts_action_front_left_up = Sensor(BoxGene(14, [], [], [], 'action', {'no': '111'}, ''))
+    s4_konts_action_front_left_down = Sensor(BoxGene(16, [], [], [], 'action', {'no': '112'}, ''))
+    s4_konts_action_front_right_up = Sensor(BoxGene(18, [], [], [], 'action', {'no': '121'}, ''))
+    s4_konts_action_front_right_down = Sensor(BoxGene(20, [], [], [], 'action', {'no': '122'}, ''))
+    s4_konts_action_back_left_up = Sensor(BoxGene(22, [], [], [], 'action', {'no': '211'}, ''))
+    s4_konts_action_back_left_down = Sensor(BoxGene(24, [], [], [], 'action', {'no': '212'}, ''))
+    s4_konts_action_back_right_up = Sensor(BoxGene(26, [], [], [], 'action', {'no': '221'}, ''))
+    s4_konts_action_back_right_down = Sensor(BoxGene(28, [], [], [], 'action', {'no': '222'}, ''))
+    # 脚丫子沾地感受器
+    s5_foot_front_left = Sensor(BoxGene(29,[],[],[],'state',{'no':11},''))
+    s5_foot_front_right = Sensor(BoxGene(30, [], [], [], 'state', {'no': 12}, ''))
+    s5_foot_back_left = Sensor(BoxGene(31, [], [], [], 'state', {'no': 21}, ''))
+    s5_foot_back_right = Sensor(BoxGene(32, [], [], [], 'state', {'no': 22}, ''))
+
+    # 初始神经网络的输出为8个动作数据，每个关节感受器连接到对应的动作效应器
+    r_knots_front_left_up = Receptor(BoxGene(29, [13,14], [], [], 'action', {'no': '111'}, ''))
+    r_knots_front_left_down = Receptor(BoxGene(30, [15, 16], [], [], 'action', {'no': '111'}, ''))
+    r_knots_front_right_up = Receptor(BoxGene(31, [17,18], [], [], 'action', {'no': '121'}, ''))
+    r_knots_front_right_down = Sensor(BoxGene(32, [19,20], [], [], 'action', {'no': '122'}, ''))
+    r_knots_back_left_up = Sensor(BoxGene(33, [21,22], [], [], 'action', {'no': '211'}, ''))
+    r_knots_back_left_down = Sensor(BoxGene(34, [23,24], [], [], 'action', {'no': '212'}, ''))
+    r_knots_back_right_up = Sensor(BoxGene(35, [25,26], [], [], 'action', {'no': '221'}, ''))
+    r_knots_back_right_down = Sensor(BoxGene(36, [27,28], [], [], 'action', {'no': '222'}, ''))
+

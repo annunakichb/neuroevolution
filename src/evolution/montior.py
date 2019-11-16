@@ -87,8 +87,8 @@ class Monitor:
         if self.callback is not None:self.callback('session.begin',self)
 
 
-    def recordParam(self,name,dict,ignoreKeys=[]):
-        encode_json = json.dumps(obj=dict,skipkeys=ignoreKeys,cls=ExtendJsonEncoder,indent=True)
+    def recordParam(self,name,dict):
+        encode_json = json.dumps(obj=dict,skipkeys=True,cls=ExtendJsonEncoder,indent=True)
         kwdata = {name:encode_json}
         self.__recordSection('记录参数',**kwdata)
         if self.callback is not None: self.callback('param.record', self)
@@ -96,6 +96,10 @@ class Monitor:
     def recordPopulationCreate(self,pop,exception=None):
         self.__recordSection('种群创建',完成情况='成功' if exception is None else str(exception),个体数量=len(pop.inds))
         if self.callback is not None: self.callback('pop.create', self)
+
+    def recordPopulationFeaturesEvaulate(self):
+        self.__recordSection('评估启动')
+        if self.callback is not None: self.callback('evaulate.begin', self)
 
     def recordPopulationFeatures(self):
         kwdatas = {}

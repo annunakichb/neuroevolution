@@ -13,12 +13,7 @@ from brain.elements import Synapse
 from brain.elements import Neuron
 import brain.runner as runner
 from brain.runner import NeuralNetworkTask
-#import brain.networks as networks
 
-import scipy
-import scipy.cluster.hierarchy as sch
-from scipy.cluster.vq import vq,kmeans,whiten
-from sklearn import cluster
 
 
 __all__ = ['NetworkType','DefaultIdGenerator','idGenerators','NeuralNetwork']
@@ -44,8 +39,25 @@ class DefaultIdGenerator:
         self.neuronId = 0
         self.synapseId = 0
         self.moduleId = 0
-    def getNetworkId(self):
+        self.ids = {}
+    def getId(self,type,**kwargs):
+        if type == 'net':
+            return self.getNetworkId()
+        elif type == 'neuron':
+            return self.getNeuronId(kwargs['net'],kwargs['coord'],kwargs['synapse'])
+        elif type == 'synapse':
+            return self.getSynapseId(kwargs['net'],kwargs['fromId'],kwargs['toId'])
+        elif type == 'module':
+            return self.getModuleId(kwargs['net'])
+        else:
+            if type not in self.ids:
+                self.ids[type] = 0
+            r = self.ids[type]
+            self.ids[type] += 1
+            return r
 
+
+    def getNetworkId(self):
         self.netid += 1
         return self.netid
     def getNeuronId(self,net,coord,synapse):
