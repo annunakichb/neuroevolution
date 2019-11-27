@@ -40,6 +40,7 @@ class NeuralElement:
 
         # 根据模型配置取得模型对象
         if self.modelConfiguration is None: raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置无效')
+        if len(self.modelConfiguration)<=0:return
         if not strs.isVaild(self.modelConfiguration.modelid): raise RuntimeError('初始化计算模型失败(NueralElement.initModel):模型配置中modelId无效')
         model = models.nervousModels.find(self.modelConfiguration.modelid)
         if model is None:raise RuntimeError('初始化计算模型失败(NueralElement.initModel):找不到模型:'+self.modelConfiguration.modelid)
@@ -139,7 +140,7 @@ class NeuralElement:
 #神经元
 class Neuron(NeuralElement):
     default_activation_function_name = 'sigmod'
-    def __init__(self,id,layer,birth,modelConfiguration,coord=None,activationFunction=None):
+    def __init__(self,id,layer,birth,modelConfiguration={},coord=None,activationFunction=None):
         '''
         神经元
         :param id:                       int或者str     ID
@@ -148,7 +149,7 @@ class Neuron(NeuralElement):
         :param modelConfiguration:       dict          计算模型配置信息
         :param coord:                    geopy.Point   位置
         '''
-        super(Neuron, self).__init__(id,birth,modelConfiguration,coord)
+        super(Neuron, self).__init__   (id,birth,modelConfiguration,coord)
         #super(id,birth,modelConfiguration,coord)
         self.layer = layer
         #if activationFunction is None and 'activationFunction' in modelConfiguration.keys() and  \

@@ -29,7 +29,7 @@ def handle_ind_begin(ind,session,**kwargs):
     net = ind.getPhenome()
     net.reset()
 
-    box = net.findBox(expression='s')
+    box = net.findBox(expression='s')[0]
     net.clock = 0
     net.activate([(box,np.array([0.]))])
 
@@ -46,7 +46,7 @@ def handle_ind_action(ind,session,**kwargs):
     f_ = kwargs['actions'][0]
 
     # 力量感知事件
-    box = genome.find_box_by_expression('f')
+    box = net.findBox(expression='f')[0]
     net.clock += 1
     net.activate([(box, f_)])
 
@@ -56,13 +56,13 @@ def handle_ind_action(ind,session,**kwargs):
     hidden_friction = 0.3 # 摩擦力，牛
 
     # 计算停止位置
-    a = f_ / hidden_box_m # 加速度
+    a = f_[0] / hidden_box_m # 加速度
     v0 = a * hidden_dis   # 松手时的初速
     a = hidden_friction / hidden_box_m # 减速度
     dis = v0 / a          # 移动距离
-    box = genome.find_box_by_expression('s')
+    box = net.findBox(expression='s')[0]
     net.clock += 1
-    net.activate([(box, dis)])
+    net.activate([(box, np.array([dis]))])
 
 def handle_set_target(ind,session,**kwargs):
     '''
@@ -76,7 +76,7 @@ def handle_set_target(ind,session,**kwargs):
 
     net = ind.getPhenome()
     genome = ind.genome
-    box = genome.find_box_by_expression('s')
+    box = genome.find_box_by_expression('s')[0]
     box.expect = target_pos
 #endregion
 
@@ -110,7 +110,8 @@ popParam = evolution.createPopParam(size=100,elitistSize=0.05,genomeDefinition=n
 runParam = evolution.createRunParam(1000,1.0,mutate_propotion=0.2,
     activity={
         'stability_threshold':0.8,'stability_resdual':0.2,
-        'stability_max_count':3,'stability_output_count':3
+        'stability_max_count':3,'stability_output_count':3,
+        'autonomous_targe':10
     },
     handlers = {
         'ind.begin':handle_ind_begin,     # 个体活动初始化

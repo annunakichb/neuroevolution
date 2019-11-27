@@ -1,6 +1,7 @@
 import numpy as np
 from itertools import permutations
-
+from itertools import combinations
+import utils.collections as collections
 
 event_ind_begin = 'ind.begin'
 event_ind_action = 'ind.action'
@@ -14,6 +15,7 @@ def do_activity(ind,session):
 
     # 生长
     _do_growth(ind,session)
+    session.monitor.recordDebug('activity','box分布',ind.getPhenome())
 
     # 任务
     return __do_task(ind,session)
@@ -28,7 +30,7 @@ def _do_growth(ind,session):
     '''
     # 胚胎阶段，生成初始网络
     net = ind.getPhenome()
-    # 随机动作执行阶段（类似幼儿节点执行大量随机动作），该节点将对每个盒子稳定其中节点的分布
+    # 随机动作执行阶段（类似幼儿阶段执行大量随机动作），该节点将对每个盒子稳定其中节点的分布
     n = 0
     last_stability = [1.0 for box in net.allbox()]
     while n < session.runParam.activity.stability_max_count:
@@ -38,16 +40,19 @@ def _do_growth(ind,session):
         # 若盒子都比较稳定，则跳过随机动作阶段
         if min(stability) >= session.runParam.activity.stability_threshold:
             break
+
         # 若所有盒子的稳定度都不再变化，则跳出随机动作阶段
         if np.average([np.abs(stability[i] - last_stability[i]) for i in range(len(stability))]) \
                  <= session.runParam.activity.stability_resdual:
             break
         last_stability = stability
+
         # 找到所有的可执行动作
-        outboxes = net.findOutputBox()
+        outboxes = net.find_receptor_boxes()
+
         # 选取count个可执行动作组合
         for count in range(len(outboxes)):
-            out_composites = list(permutations(outboxes, count))
+            out_composites = list(combinations(outboxes, count+1))
             # 对每个动作组合随机选择若干次输出
             for i in range(session.runParam.activity.stability_output_count):
                 net.clear_expect()  # 这里的期望是指输出盒子的预期输出
@@ -59,10 +64,23 @@ def _do_growth(ind,session):
                 # 网络观察新的环境
                 # net.observe(obs)
         n += 1
-    # 自主目标执行阶段，为因果推理设定可信度
-    tboxes = net.findTBox(sorted='depth')
-    aboxes = net.findABox(sorted='depth')
-    env_sensors = net.findEnvSensorBox()  # 所有感知盒子
+    # 自主目标执行阶段：随机设定感知目标，执行目标推理过程
+    env_sensors_box = net.findEnvSensorBox()
+    for i in range(session.runParam.activity.autonomous_targe.count):
+        # 对所有感知盒子设定随机期望
+        net.clear_expect()  # 清除所有的期望值
+        for sensor_box in env_sensors_box:
+            sensor_box.expection = sensor_box.random()
+        # 根据感知盒子的期望执行推理过程
+        actions = net.inference()
+        # 向环境输出动作，得到新的观察
+        obs = session.runParam.handlers[event_ind_action](ind, session, actions=[out.expection for out in outboxes])
+        # 根据观察为每个盒子计算可靠度
+        reliability_list = net.compute_reliability()
+
+    tboxes = net.findTBox()
+    aboxes = net.findABox()
+
     reliability_list = []
     for tbox in tboxes:
         for i in range(session.runParam.activity.autonomous_targe.count):
@@ -97,7 +115,7 @@ def _do_growth(ind,session):
         reliability = np.average(reliability_list)
         abox.reliability = reliability
 
-def __do_task(self,ind,session):
+def __do_task(ind,session):
     '''
     执行任务阶段
     :param ind:      Individual 个体

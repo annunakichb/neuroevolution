@@ -6,7 +6,11 @@ from brain.elements import Neuron
 import math
 import brain.networks as networks
 import utils.collections as collections
-#region Gene
+from ne.senal.attention import BoxAttentionOperation
+
+from brain.models import Variable
+from numpy.linalg import  LinAlgError
+#region BoxGene
 class BoxGene:
     '''
     盒子基因
@@ -68,7 +72,7 @@ class BoxActionConnectionGene:
 #region element
 class FeatureNeuron(Neuron):
     max_history_memory_length = 5
-    def __init__(self,id,layer,boxid,u,sigma,birth,modelConfiguration,coord=None):
+    def __init__(self,id,layer,boxid,u,sigma,birth,modelConfiguration={},coord=None):
         '''
         特征神经元，每个神经元表达一个特征值
         :param id:                  int  id
@@ -81,31 +85,39 @@ class FeatureNeuron(Neuron):
         :param coord:               list 坐标
         '''
         Neuron.__init__(self,id,layer,birth,modelConfiguration,coord)
-        self.state['activation'] = 0.
+        self.states['activation'] = 0.
         #self.state['clock'] = 0
         self.features = {}
         self.features['liveness'] = 0.
-        self.variables['u'] = u
-        self.variables['sigma'] = sigma
+        self.u = u
+        self.sigma = sigma
         self.boxid = boxid
         self.history_states = []
+        self.cur_capcity_count = 0
     def activation(self,intensity,clock):
         if 'clock' in self.states:
-            self.history_states.append((self.state['activation'],self.state['clock']))
+            self.history_states.append((self.states['activation'],self.states['clock']))
         while len(self.history_states)>FeatureNeuron.max_history_memory_length:
             self.history_states.pop(0)
 
-        self.state['activation'] = intensity
-        self.state['clock'] = clock
+        self.states['activation'] = intensity
+        self.states['clock'] = clock
     def reset(self):
-        self.state['activation'] = 0.
+        self.states['activation'] = 0.
         self.states.pop('clock')
+
+    def __str__(self):
+        return '<' + self.u + "," + self.sigma + ">"
+    def __repr__(self):
+        return '<' + self.u + "," + self.sigma + "," + self.cur_capcity_count + ">"
+
+#endregion
 
 
 class Box:
 
     #region 初始化
-    max_activation_feature_history = 5
+    activation_feature_history_len = 5
     def __init__(self,gene,net):
         '''
         神经元盒子
@@ -116,16 +128,21 @@ class Box:
         self.nodes = []
         self.depth = 0
         self.features = {'expection':0.,'reliability':0.,'stability':0.}
+        self.old_statility = []
         self.inputs = []
         self.outputs = []
         self.net = net
         self.grids =[]
+        self.node_grid_records = []
         self.energy_list = []
         self.activation_feature_history = []
         self.attributes = []
 
+
     def __str__(self):
         return self.gene.expression
+    def __repr__(self):
+        return self.gene.expression+":"+self.nodes
 
     #endreigon
 
@@ -136,11 +153,13 @@ class Box:
         if inputs is None:return self.inputs
         elif isinstance(inputs,Box):self.inputs.append(inputs)
         elif isinstance(inputs,list):self.inputs.extend(inputs)
+        self.depth = np.max([b.depth for b in self.inputs])+1
         return self.inputs
     def add_input_boxes(self,inputs):
         if inputs is None:return self.inputs
         elif isinstance(inputs,Box):self.inputs.append(inputs)
         elif isinstance(inputs,list):self.inputs.extend(inputs)
+        self.depth = np.max([b.depth for b in self.inputs]) + 1
         return self.inputs
     def put_output_boxes(self,outputs):
         self.outputs = []
@@ -162,8 +181,13 @@ class Box:
         取得表达式的操作符部分
         :return: str
         '''
-        index = self.gene.expression.indexOf('(')
-        return self.gene.expression[:index]
+        if self.gene.expression.__contains__('('):
+            return self.gene.expression[:self.gene.expression.index('(')]
+        return ''
+
+    def getAttentionExpression(self):
+        exp_name = self.getExpressionOperation()
+        return BoxAttentionOperation.getAttention(exp_name)
 
     def getExpressionParam(self):
         '''
@@ -204,8 +228,8 @@ class Box:
         self.features['expection'] = value
 
     def random(self):
-        return  np.random.rand()*self.gene.clip[0]+(self.gene.clip[1]-self.gene.clip[0])
-
+        r = [(np.random.rand()+clip[0])*(clip[1]-clip[0]) for clip in self.gene.clip]
+        return r
     #endregion
 
     #region 可靠度和稳定度管理
@@ -236,11 +260,11 @@ class Box:
         if det == 0:
             raise NameError("The covariance matrix can't be singular")
         x_mu = np.array(x - mu)
-        inv = sigma.I
+        inv = np.linalg.inv(sigma)
         result = math.sqrt(x_mu * inv * x_mu.T)
         return result
 
-    def norm_pdf_multivariate(x, mu, sigma):
+    def norm_pdf_multivariate(self,x, mu, sigma):
         '''
         计算x的多元高斯分布函数
         ：param x:
@@ -254,11 +278,13 @@ class Box:
             raise NameError("The covariance matrix can't be singular")
         norm_const = 1.0 / (math.pow((2 * math.pi), float(size) / 2) * math.pow(det, 1.0 / 2))
         #x_mu = np.matrix(x - mu)
-        x_mu = np.array(x - mu)
-        inv = sigma.I
-        result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
-        return norm_const * result
-
+        x_mu = np.array([i-j for i,j in zip(x,mu)])
+        try:
+            inv = np.linalg.inv(sigma)
+            result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
+            return norm_const * result
+        except:
+            print('正态值错误%s,%s,%s,%s' % (str(norm_const),str(result),str(sigma),str(inv)))
     @property
     def activation_max(self):
         '''
@@ -282,8 +308,14 @@ class Box:
         '''
         计算输入值对每个节点的激活强度
         :param values: list 激活强度
-        :return:
+        :return: list 每个节点的激活强度值，按照nodes的顺序排列
         '''
+        if len(self.nodes)<=0:return []
+        elif len(self.nodes)==1:
+            intensity = [self.norm_pdf_multivariate(values, node.u, node.sigma) for node in self.nodes]
+            return [self.norm_pdf_multivariate(values,self.nodes[0].u,self.nodes[0].sigma)/
+                    self.norm_pdf_multivariate(self.nodes[0].u, self.nodes[0].u, self.nodes[0].sigma)]
+
         intensity = [self.norm_pdf_multivariate(values,node.u,node.sigma) for node in self.nodes]
         activation_range = [self.norm_pdf_multivariate(node.u,node.u,node.sigma) for node in self.nodes]
         activation_range = [np.min(activation_range),np.max(activation_range)]
@@ -296,6 +328,7 @@ class Box:
         :param values:  样本值
         :return: tuple  最大激活强度，对应节点序号
         '''
+        if len(self.nodes)<=0:return []
         intensity = [self.norm_pdf_multivariate(values, node.u, node.sigma) for node in self.nodes]
         intensity = intensity / self.activation_range
         index = np.argsort(intensity)
@@ -303,10 +336,21 @@ class Box:
 
     #endregion
 
+    #region 执行推理
+    def do_inference(self):
+        if not collections.all(self.inputs,lambda box:box.expection is not None):
+            return None
+        attention = self.getAttentionExpression()
+        if attention is None: return
+        expection = attention.do_expection(self)
+        self.expection = expection
+    #endregion
+
     #region 核心算法，完成关注操作
     def do_attention(self):
-        operation = self.getExpressionOperation()
-        return operation.do_attention(self)
+        attention = self.getAttentionExpression()
+        if attention is None:return
+        return attention.do_attention(self)
 
     def activate(self,values):
         '''
@@ -341,19 +385,25 @@ class Box:
              5) 重新计算所有节点分
         :return:
         '''
-        #计算值所在网格
+        # 保存改变前的nodes分布
+        old_node_distribution = [(n.u,n.sigma,collections.reduce(lambda g1,g2:g1['samples_count']+g2['samples_count'],g)) for n,g in zip(self.nodes,self.node_grid_records)]
+        #计算值对应各个节点的激活强度
         activation_intensity_list = self.activation_intensity(values)
-        grid,no,center,max_intersity,node_index = self._put_values_in_grid(values,activation_intensity_list)
-
-        idGenerator = networks.idGenerators.find(self.net.genome.definition.idGenerator)
+        #计算值所属网格
+        grid,no,center = self._put_values_in_grid(values,activation_intensity_list)
+        # 计算值的最大激活强度及其对应的节点
+        sorted_intensity_index = np.argsort(activation_intensity_list) if len(activation_intensity_list)>0 else []
+        max_intensity_index = sorted_intensity_index[-1] if len(sorted_intensity_index)>0 else -1
+        max_intensity = activation_intensity_list[sorted_intensity_index[-1]] if len(sorted_intensity_index)>0 else 0.0
         # 如果没有实际激活的节点，则创建一个新节点
-        if max_intersity < self.net.definition.box.activation_threadshold:
-            # 创建节点，没有做连接是以为初节点与上层是全连接
+        if max_intensity < self.net.definition.box.activation_threadshold:
+            # 创建节点，没有做连接是因为初始节点与上层是全连接
+            idGenerator = networks.idGenerators.find(self.net.definition.idGenerator)
             node_sigma = self.net.definition.box.init_lambda*np.identity(len(values))
-            node = FeatureNeuron(idGenerator.getNeuronId(),self.depth,self.id,values,node_sigma,None)
+            node = FeatureNeuron(idGenerator.getNeuronId(),self.depth,self.id,values,node_sigma,self.net.clock)
             self.nodes.append(node)
         else:
-            node = self.nodes[node_index]
+            node = self.nodes[max_intensity_index]
             # 如果激活节点的样本容量大于分裂阈值，以eplison概率进行分裂，以1-eplison概率进行融合
             if node.cur_capcity_count >= self.net.definition.box.overflow_count:
                 eplison =(self.net.definition.box.max_engegy - self.energy_list[-1]) / self.net.definition.box.max_engegy
@@ -373,10 +423,38 @@ class Box:
 
         activation_feature = self.activation_feature()
         self.activation_feature_history.append((activation_feature,self.net.clock))
-        while len(self.activation_feature_history)>Box.activation_feature_history:
+        while len(self.activation_feature_history)>Box.activation_feature_history_len:
             self.activation_feature_history.pop(0)
 
         self.compute_energy()
+        self.compute_statbility(old_node_distribution)
+
+    def compute_statbility(self,old_node_distribution):
+        '''
+        计算前后的Jensen-Shannon散度
+        :param old_node_distribution:
+        :return:
+        '''
+        total_samples_count1 = collections.reduce(lambda d1,d2:d1[2]+d2[2],old_node_distribution)
+        p1 = lambda x:collections.reduce(
+                lambda p11,p12:self.norm_pdf_multivariate(x,p11[0],p11[1])*p11[2] + self.norm_pdf_multivariate(x,p12[0],p12[1])*p12[2]
+                ,old_node_distribution)/total_samples_count1
+
+        node_distribution = [
+            (n.u, n.sigma, collections.reduce(lambda g1, g2: g1['samples_count'] + g2['samples_count'], g)) for n, g in
+            zip(self.nodes, self.node_grid_records)]
+        total_samples_count2 = collections.reduce(lambda d1,d2:d1[2]+d2[2],node_distribution)
+        p2 = lambda x: collections.reduce(
+            lambda p21, p22: self.norm_pdf_multivariate(x, p21[0], p21[1]) * p21[2] + self.norm_pdf_multivariate(x,p22[0],p22[1])*p22[2]
+            , old_node_distribution) / total_samples_count2
+
+        kl1 = np.sum([p1(node['center'])*np.log(p1(node['center'])*2/(p1(node['center'])+p2(node['center']))) for node in self.nodes])
+        kl2 = np.sum(
+            [p2(node['center']) * np.log(p2(node['center']) * 2 / (p1(node['center']) + p2(node['center']))) for node in
+             self.nodes])
+        return (kl1+kl2)/2
+
+
 
     def compute_energy(self):
         activation_nodes = [node.states['activation'] for node in self.nodes if node.states['activation']>0]
@@ -482,18 +560,19 @@ class Box:
             if len(activation_intensity_list)>0:
                 asc_index = np.argsort(activation_intensity_list)
                 max_intersity, node_index = activation_intensity_list[asc_index[-1]],asc_index[-1]
-            grid = {'grid_xh': no, 'grid_center': center, 'samples_count': 0, 'node_id':self.nodes[node_index].id}
+            grid = {'grid_xh': no, 'grid_center': center, 'samples_count': 0, 'node_id':self.nodes[node_index].id if node_index>=0 else -1}
             self.grids.append(grid)
         grid['samples_count'] += 1
-        return grid,no,center,max_intersity,node_index
+        return grid,no,center
 
-    def _put_values_in_grid(self,values):
+    def _put_values_in_grid(self,values,activation_intensity_list):
         '''
         将值放入所属网格
         :param values:  样本值
+        :param activation_intensity_list: list values对应各个节点的激活强度
         :return:   tuple  网格元祖，最大激活强度，最大激活强度对应的节点序号
         '''
-        return self._get_grid_by_value(values)
+        return self._get_grid_by_value(values,activation_intensity_list)
 
     def _get_grids_by_node(self,node):
         '''
@@ -509,11 +588,19 @@ class Box:
         :param grids:  list 属于某个节点的网格
         :return:  tuple 均值，方差
         '''
-        u = np.sum([x.center * x.samples_count for x in grids]) / np.sum(
-            [x.samples_count for x in grids])
-        x = np.array([x.center for x in grids]).T
-        fweights = np.array([x.samples_count for x in grids])
+        total_samples_count = np.sum([x['samples_count'] for x in grids])
+        u = np.sum([[y*x['samples_count'] for y in x['grid_center']] for x in grids],axis=0) / total_samples_count
+        dimension = len(grids[0]['grid_center'])
+        sigma= np.eye(dimension)
+        if total_samples_count==1:
+            return u,sigma
+        x = np.array([x['grid_center'] for x in grids]).T
+        fweights = np.array([x['samples_count'] for x in grids])
         sigma = np.cov(x, fweights=fweights)
+        if len(sigma.shape) == 0:
+            sigma = [[float(sigma)]] if float(sigma)!=0 else np.eye(dimension)
+        elif len(sigma.shape)!=2:
+            sigma = np.eye(dimension)
         return u,sigma
 
     def _redistribution(self):
@@ -524,7 +611,7 @@ class Box:
         :return: None
         '''
         # 判断每一个网格所在节点
-        node_grid_records = []*len(self.nodes)
+        node_grid_records = [[] for i in range(len(self.nodes))]
         for grid in self.grids:
             # 当前网格信息
             grid_xh,grid_center,samples_count,node_id = grid['grid_xh'],grid['grid_center'],grid['samples_count'],grid['node_id']
@@ -538,8 +625,10 @@ class Box:
                 continue
             grid['node_id'] = node.id
             node_grid_records[max_intensity_index].append(grid)
+        self.node_grid_records = node_grid_records
         # 对每一个节点重新计算分布
         for index,node_grid_record in enumerate(node_grid_records):
+            if len(node_grid_record)<=0:continue
             u,sigma = self._compute_multivariant_pdf_by_grids(node_grid_record)
             self.nodes[index].u = u
             self.nodes[index].sigma = sigma

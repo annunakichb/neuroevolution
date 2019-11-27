@@ -12,6 +12,8 @@ from ne.senal.operations import SelectionOperation
 from ne.senal.operations import MutateOperation
 import ne.senal.activity
 import ne as ne
+import brain.networks
+from ne.senal.network import SenalIdGenerator
 
 #__all__ = ['senal_init']
 
@@ -24,6 +26,11 @@ indTypeName = 'senal_network'
 def senal_init():
     # 神经元进化模块初始化
     ne.neuroevolution_init()
+
+    # 创建缺省的id生成器
+    idGenerator = SenalIdGenerator()
+    brain.networks.idGenerators.register(idGenerator, 'senal')
+    brain.set_default_netdef_info('idGenerator','senal')
 
     # 注册个体类型
     indType = IndividualType('senal_network', SENetworkGenome, SENALGenomeFactory(), SENetwork,SENetworkDecoder())

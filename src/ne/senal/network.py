@@ -1,10 +1,32 @@
-
+import numpy as np
 import brain.networks as networks
 from brain.networks import NeuralNetwork
 from ne.senal.box import BoxGene
 from ne.senal.box import Box
 from ne.senal.box import FeatureNeuron
+from brain.networks import DefaultIdGenerator
 import utils.collections as collecitons
+import operator
+
+
+class SenalIdGenerator(DefaultIdGenerator):
+    def __init__(self):
+        super(SenalIdGenerator, self).__init__()
+        self.boxids = {}
+        self.boxid = 1
+
+    def getNeuronId(self):
+        self.neuronId += 1
+        return self.neuronId
+
+    def getBoxId(self,attented_boxid_list,sensor_name=''):
+        if sensor_name != '':
+            if sensor_name not in self.boxids:
+                self.boxids[sensor_name] = self.boxid
+                self.boxid += 1
+            return self.boxids[sensor_name]
+        else:
+            attented_boxid_list = np.sort(attented_boxid_list)
 
 class SENetworkGenome:
     def __init__(self,genomeDefinition):
@@ -133,10 +155,8 @@ class SENetworkDecoder:
                         attention_box.put_output_boxes(receptor_box)
                 else:
                     attention_boxes.put_output_boxes(receptor_box)
+        net.rearrange_depth()
         return net
-
-
-
 
 class SENetwork(NeuralNetwork):
     def __init__(self,id,definition):
@@ -149,9 +169,14 @@ class SENetwork(NeuralNetwork):
         self.attentions = []  # 注意，参见BoxAttentionGene
         self.connections = []  # 动作连接，参见BoxActionGene
 
-    def allbox(self):
-        return self.sensor_boxes + self.attention_boxes + self.action_boxes + self.receptor_boxes
+    def __str__(self):
+        allbox = self.allbox()
+        return str(self.id)+":"+collecitons.reduce(lambda x,y:str(x)+'\n'+str(y),allbox)
 
+    def allbox(self):
+        box = self.sensor_boxes + self.attention_boxes + self.action_boxes + self.receptor_boxes
+        box = sorted(box,key=lambda x:x.depth)
+        return box
     def get_sensor_box(self):
         return self.sensor_boxes
     def get_attention_box(self):
@@ -195,28 +220,35 @@ class SENetwork(NeuralNetwork):
         '''
         boxes = self.allbox()
         r = []
+
         for b in boxes:
-            if group is not None and not b.gene.group.startWith(group):continue
+            if group is not None and not b.gene.group.startswith(group):continue
             if type is not None and b.gene.type != type:continue
-            if expressType is not None and not b.gene.expression.startWith(expressType):continue
+            if expressType is not None and not b.gene.expression.startswith(expressType):continue
             if depth>=0 and b.depth != depth:continue
-            if expression is not None and expression != b.gene.expression:continue
+            if expression is not None and expression != '' and expression != b.gene.expression:continue
             r.append(b)
 
-        return r if len(r)>1 or len(r)<=0 else r[0]
+        return r
+        #return r if len(r)>1 or len(r)<=0 else r[0]
 
 
-    def findTBox(self,cause,effect):
-        return [b for b in self.boxes if
+    def findTBox(self,cause=None,effect=None):
+        allbox = self.allbox()
+        box = [b for b in allbox if
                 (b.getExpressionOperation() == 'T') and
                 (cause is not None and b.isInExpressionParam(cause,parts='cause')) and
                 (effect is not None and b.isInExpressionParam(effect,parts='effect'))]
+        return sorted(box,key='depth',reverse=True)
 
-    def findABox(self,params):
-        return [b for b in self.boxes if
+    def findABox(self,params=None):
+        allbox = self.allbox()
+        box = [b for b in allbox if
                 (b.getExpressionOperation() == 'A') and
                 (params is not None and b.isInExpressionParam(params))]
-    def findOutputBox(self):
+        return sorted(box, key='depth', reverse=True)
+
+    def find_receptor_boxes(self):
         return self.receptor_boxes;
 
     def findEnvSensorBox(self):
@@ -225,6 +257,24 @@ class SENetwork(NeuralNetwork):
         :return:
         '''
         return self.findBox('sensor','env.')
+
+    def rearrange_depth(self):
+        allbox = self.allbox()
+        maxdepth = 0
+        for b in allbox:b.depth = -1
+        for b in self.get_sensor_box():
+            b.depth = 0
+            allbox.remove(b)
+        while len(allbox)>0:
+            for b in allbox:
+                if len(b.inputs)<=0:allbox.remove(b)
+                elif collecitons.all(b.inputs,lambda x:x.depth != -1):
+                    b.depth = np.max([t.depth for t in b.inputs])+1
+                    maxdepth = b.depth if maxdepth<b.depth else maxdepth
+                    allbox.remove(b)
+        allbox = self.allbox()
+        for b in allbox:
+            if b.depth<0:b.depth = maxdepth+1
 
     def get_attented_box(self,boxes):
         '''
@@ -247,9 +297,6 @@ class SENetwork(NeuralNetwork):
         for box in allbox:
             box.expection = 0.
 
-    def attention_needed(self,box):
-        input_boxes = box.put_input_boxes()
-        return collecitons.all(input_boxes,lambda b:'clock' in b.states and b.states['clock'] == self.clock)
 
     def activate(self, inputs):
         '''
@@ -259,20 +306,30 @@ class SENetwork(NeuralNetwork):
         :return:
         '''
         if inputs is None: return []
-        for box,values in inputs:
-            box.activate(values)
 
         allbox = self.allbox()
         count = len(allbox)
-        while count>0:
-            for box in allbox:
-                if ('clock' in box.states and box.states['clock'] == self.clock): # 该盒子没有在当前时钟活动
-                    count -= 1
-                elif box.gene.type == 'sensor':      # 该盒子是感知型
-                    continue
-                elif not self.attention_needed(box): # 该盒子的上游盒子没有全部被激活
-                    count -= 1
-                else:
-                    box.do_attention()
-                    count -= 1
-            count = len(allbox)
+
+        for box,values in inputs:
+            box.activate(values)
+            allbox.remove(box)
+            count -= len(allbox)
+
+        max_depth = np.max([box.depth for box in allbox])
+        for i in range(1,max_depth+1):
+            boxes = self.findBox(depth=i)
+            for box in boxes:
+                if box not in allbox:continue
+                if box.type != Box.type_attention:continue 
+                if collecitons.all(box.inputs,lambda b: b in allbox):continue
+                box.do_attention()
+                allbox.remove(box)
+                count -= len(allbox)
+
+    def inference(self):
+        depth = 1
+        while True:
+            boxes = self.findBox(depth=depth)
+            if boxes is None or len(boxes)<=0:break
+            collecitons.foreach(boxes,lambda b:b.do_inference)
+        
